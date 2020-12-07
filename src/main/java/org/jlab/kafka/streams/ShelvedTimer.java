@@ -124,7 +124,7 @@ public class ShelvedTimer {
                             if (now.isAfter(ts)) {
                                 delayInSeconds = 0; // If expiration is in the past then expire immediately
                             }
-                            log.debug("Scheduling for delay of: {}", delayInSeconds);
+                            log.debug("Scheduling {} for delay of: {} seconds ", key, delayInSeconds);
                             handle = context.schedule(Duration.ofSeconds(delayInSeconds), PunctuationType.WALL_CLOCK_TIME, timestamp -> {
                                 log.debug("Punctuation triggered for: {}", key);
                                 context.forward(key, null);

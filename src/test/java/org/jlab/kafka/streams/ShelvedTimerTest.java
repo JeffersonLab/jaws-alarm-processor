@@ -55,7 +55,6 @@ public class ShelvedTimerTest {
         keyValues.add(KeyValue.pair("alarm1", alarm2));
         inputTopic.pipeKeyValueList(keyValues, Instant.now(), Duration.ofSeconds(5));
         testDriver.advanceWallClockTime(Duration.ofSeconds(5));
-        //Thread.sleep(6000);
         KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertNull(result.value);
     }
@@ -63,14 +62,17 @@ public class ShelvedTimerTest {
     @Test
     public void notYetExpired() {
         inputTopic.pipeInput("alarm1", alarm1);
-        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValue();
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
+        inputTopic.pipeInput("alarm2", alarm2);
+        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(alarm1, result.value);
+        Assert.assertNull(result.value);
     }
 
     @Test
     public void expired() {
         inputTopic.pipeInput("alarm1", alarm1);
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValue();
         Assert.assertEquals("alarm1", result.key);
         Assert.assertNull(result.value);
