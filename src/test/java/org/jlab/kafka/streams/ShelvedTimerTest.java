@@ -40,25 +40,26 @@ public class ShelvedTimerTest {
     }
 
     @Test
-    public void matchedTombstoneMsg() {
+    public void tombstoneMsg() {
         inputTopic.pipeInput("alarm1", alarm1);
         inputTopic.pipeInput("alarm1", null);
-        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(1);
+        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertNull(result.value);
     }
 
-
     @Test
-    public void unmatchedTombstoneMsg() {
-        inputTopic.pipeInput("alarm1", null);
-        Assert.assertTrue(outputTopic.isEmpty()); // Cannot transform a tombstone without a prior registration!
+    public void notYetExpired() {
+        inputTopic.pipeInput("alarm1", alarm1);
+        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValue();
+        Assert.assertEquals("alarm1", result.key);
+        Assert.assertEquals(alarm1, result.value);
     }
 
     @Test
-    public void regularMsg() {
+    public void expired() {
         inputTopic.pipeInput("alarm1", alarm1);
         KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValue();
-        Assert.assertEquals("{\"topic\":\"active-alarms\",\"channel\":\"channel1\"}", result.key);
-        Assert.assertEquals("{\"mask\":\"a\",\"outkey\":\"alarm1\"}", result.value);
+        Assert.assertEquals("alarm1", result.key);
+        Assert.assertNull(result.value);
     }
 }

@@ -6,6 +6,8 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.state.KeyValueStore;
 import org.jlab.kafka.alarms.ShelvedAlarm;
 
 import java.time.Duration;
@@ -70,39 +72,74 @@ public class ShelvedTimer {
 
         final KStream<String, ShelvedAlarm> input = builder.stream(INPUT_TOPIC, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
 
-        input.foreach((key, value) -> {
-            ScheduledFuture handle = channelHandleMap.get(key);
+        final KStream<String, ShelvedAlarm> output = input.transform(new MsgTransformerFactory());
 
-            // Clear expiration timer
-            if(value == null || value.getExpiration() == null) {
-                if(handle != null) {
-                    handle.cancel(false);
-                }
-                channelHandleMap.remove(key);
-            } else { // Possibly set timer
-                if(handle != null) {
-                    // already running, do nothing!
-                } else {
-                    Instant ts = Instant.ofEpochMilli(value.getExpiration());
-                    Instant now = Instant.now();
-                    long delayInSeconds = Duration.between(now, ts).getSeconds();
-                    if(now.isAfter(ts)) {
-                        delayInSeconds = 0; // If expiration is in the past then expire immediately
-                    }
-                    handle = scheduler.schedule(() -> {
-                        sendTombstone(key);
-                        channelHandleMap.remove(key);
-                    },delayInSeconds, TimeUnit.SECONDS);
-                    channelHandleMap.put(key, handle);
-                }
-            }
-        });
+        output.to(OUTPUT_TOPIC, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
         return builder.build();
     }
 
-    static void sendTombstone(String channel) {
+    /**
+     * Factory to create Kafka Streams Transformer instances; references a stateStore to maintain previous
+     * RegisteredAlarms.
+     */
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>> {
 
+        /**
+         * Return a new {@link Transformer} instance.
+         *
+         * @return a new {@link Transformer} instance
+         */
+        @Override
+        public Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>> get() {
+            return new Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>>() {
+                private ProcessorContext context;
+
+                @Override
+                public void init(ProcessorContext context) {
+                    this.context = context;
+                }
+
+                @Override
+                public KeyValue<String, ShelvedAlarm> transform(String key, ShelvedAlarm value) {
+                    KeyValue<String, ShelvedAlarm> result = null; // null returned to mean no record
+
+                    ScheduledFuture handle = channelHandleMap.get(key);
+
+                    // Clear expiration timer
+                    if(value == null || value.getExpiration() == null) {
+                        if(handle != null) {
+                            handle.cancel(false);
+                        }
+                        channelHandleMap.remove(key);
+                    } else { // Possibly set timer
+                        context.forward(key, null); // testing!
+                        if(handle != null) {
+                            // already running, do nothing!
+                        } else {
+                            Instant ts = Instant.ofEpochMilli(value.getExpiration());
+                            Instant now = Instant.now();
+                            long delayInSeconds = Duration.between(now, ts).getSeconds();
+                            if(now.isAfter(ts)) {
+                                delayInSeconds = 0; // If expiration is in the past then expire immediately
+                            }
+                            handle = scheduler.schedule(() -> {
+                                context.forward(key, null);
+                                channelHandleMap.remove(key);
+                            },delayInSeconds, TimeUnit.SECONDS);
+                            channelHandleMap.put(key, handle);
+                        }
+                    }
+
+                    return result; // We never return anything but null here because records are produced async
+                }
+
+                @Override
+                public void close() {
+                    // Nothing to do
+                }
+            };
+        }
     }
 
     /**
