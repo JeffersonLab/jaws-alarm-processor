@@ -18,13 +18,13 @@ cd shelved-timer
 ```
 docker-compose up
 ```
-3. Shelve an alarm for 5 seconds
+3. Monitor for expiration tombstone message 
 ```
-docker exec -it console /scripts/shelved-alarms/set-shelved.py channel1 
+docker exec -it console /scripts/shelved-alarms/list-shelved.py --monitor 
 ```
-4. Verify that the expiration tombstone message is received 
+4. Shelve an alarm for 5 seconds
 ```
-docker exec -it console /scripts/shelved-alarms/list-shelved.py 
+docker exec -it console /scripts/shelved-alarms/set-shelved.py channel1 --reason "We are testing this alarm" --expirationseconds 5
 ```
 
 ## Build
