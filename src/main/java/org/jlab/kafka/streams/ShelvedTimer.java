@@ -6,17 +6,14 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.StoreBuilder;
-import org.apache.kafka.streams.state.Stores;
-import org.jlab.kafka.alarms.DirectCAAlarm;
-import org.jlab.kafka.alarms.RegisteredAlarm;
+import org.jlab.kafka.alarms.ShelvedAlarm;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
@@ -24,13 +21,20 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class ShelvedTimer {
     private static final Logger LOGGER = Logger.getLogger("org.jlab.kafka.streams.ShelvedTimer");
 
-    public static final String INPUT_TOPIC = "registered-alarms";
-    public static final String OUTPUT_TOPIC = "epics-channels";
+    public static final String INPUT_TOPIC = "shelved-alarms";
+    public static final String OUTPUT_TOPIC = INPUT_TOPIC;
 
     public static final Serde<String> INPUT_KEY_SERDE = Serdes.String();
-    public static final SpecificAvroSerde<RegisteredAlarm> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<ShelvedAlarm> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
     public static final Serde<String> OUTPUT_KEY_SERDE = INPUT_KEY_SERDE;
-    public static final Serde<String> OUTPUT_VALUE_SERDE = INPUT_KEY_SERDE;
+    public static final SpecificAvroSerde<ShelvedAlarm> OUTPUT_VALUE_SERDE = INPUT_VALUE_SERDE;
+
+    public static ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    /**
+     * Enumerations of all channels with expiration timers, mapped to the cancellable Executor handle.
+     */
+    public static Map<String, ScheduledFuture> channelHandleMap = new ConcurrentHashMap<>();
 
     static Properties getStreamsConfig() {
 
@@ -43,7 +47,7 @@ public class ShelvedTimer {
         registry = (registry == null) ? "http://localhost:8081" : registry;
 
         final Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "registrations2epics");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "shelved-timer");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0); // Disable caching
         props.put(SCHEMA_REGISTRY_URL_CONFIG, registry);
@@ -64,29 +68,41 @@ public class ShelvedTimer {
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
         INPUT_VALUE_SERDE.configure(config, false);
 
-        final StoreBuilder<KeyValueStore<String, RegisteredAlarm>> storeBuilder = Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore("Registrations2EpicsStore"),
-                INPUT_KEY_SERDE,
-                INPUT_VALUE_SERDE
-        ).withCachingEnabled();
+        final KStream<String, ShelvedAlarm> input = builder.stream(INPUT_TOPIC, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
 
-        builder.addStateStore(storeBuilder);
+        input.foreach((key, value) -> {
+            ScheduledFuture handle = channelHandleMap.get(key);
 
-        final KStream<String, RegisteredAlarm> input = builder.stream(INPUT_TOPIC, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
-
-        final KStream<String, String> output = input.transform(new MsgTransformerFactory(storeBuilder.name()), storeBuilder.name());
-
-        output.to(OUTPUT_TOPIC, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
+            // Clear expiration timer
+            if(value == null || value.getExpiration() == null) {
+                if(handle != null) {
+                    handle.cancel(false);
+                }
+                channelHandleMap.remove(key);
+            } else { // Possibly set timer
+                if(handle != null) {
+                    // already running, do nothing!
+                } else {
+                    Instant ts = Instant.ofEpochMilli(value.getExpiration());
+                    Instant now = Instant.now();
+                    long delayInSeconds = Duration.between(now, ts).getSeconds();
+                    if(now.isAfter(ts)) {
+                        delayInSeconds = 0; // If expiration is in the past then expire immediately
+                    }
+                    handle = scheduler.schedule(() -> {
+                        sendTombstone(key);
+                        channelHandleMap.remove(key);
+                    },delayInSeconds, TimeUnit.SECONDS);
+                    channelHandleMap.put(key, handle);
+                }
+            }
+        });
 
         return builder.build();
     }
 
-    private static String toJsonKey(String channel) {
-        return "{\"topic\":\"active-alarms\",\"channel\":\"" + channel + "\"}";
-    }
+    static void sendTombstone(String channel) {
 
-    private static String toJsonValue(String outkey, RegisteredAlarm registration) {
-        return registration == null ? null : "{\"mask\":\"a\",\"outkey\":\"" + outkey + "\"}";
     }
 
     /**
@@ -105,6 +121,7 @@ public class ShelvedTimer {
             @Override
             public void run() {
                 streams.close();
+                scheduler.shutdown();
                 latch.countDown();
             }
         });
@@ -116,67 +133,5 @@ public class ShelvedTimer {
             System.exit(1);
         }
         System.exit(0);
-    }
-
-    /**
-     * Factory to create Kafka Streams Transformer instances; references a stateStore to maintain previous
-     * RegisteredAlarms.
-     */
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, RegisteredAlarm, KeyValue<String, String>> {
-
-        private final String storeName;
-
-        /**
-         * Create a new MsgTransformerFactory.
-         *
-         * @param storeName The state store name
-         */
-        public MsgTransformerFactory(String storeName) {
-            this.storeName = storeName;
-        }
-
-        /**
-         * Return a new {@link Transformer} instance.
-         *
-         * @return a new {@link Transformer} instance
-         */
-        @Override
-        public Transformer<String, RegisteredAlarm, KeyValue<String, String>> get() {
-            return new Transformer<String, RegisteredAlarm, KeyValue<String, String>>() {
-                private KeyValueStore<String, RegisteredAlarm> store;
-
-                @Override
-                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
-                public void init(ProcessorContext context) {
-                    store = (KeyValueStore<String, RegisteredAlarm>) context.getStateStore(storeName);
-                }
-
-                @Override
-                public KeyValue<String, String> transform(String key, RegisteredAlarm value) {
-                    KeyValue<String, String> result = null; // null returned to mean no record - when not of type DirectCAAlarm OR when an unmatched tombstone is encountered
-
-                    String channel;
-
-                    if(value == null) { // Tombstone - we need most recent non-null registration to transform
-                        RegisteredAlarm previous = store.get(key);
-                        if(previous != null) { // We only store DirectCAAlarm, so no need to check type
-                            channel = ((DirectCAAlarm)previous.getProducer()).getPv();
-                            result = KeyValue.pair(toJsonKey(channel), toJsonValue(key, value));
-                        }
-                    } else if(value.getProducer() instanceof DirectCAAlarm) {
-                        channel = ((DirectCAAlarm) value.getProducer()).getPv();
-                        result = KeyValue.pair(toJsonKey(channel), toJsonValue(key, value));
-                        store.put(key, value);  // Store most recent non-null registration for each CA alarm (key)
-                    }
-
-                    return result;
-                }
-
-                @Override
-                public void close() {
-                    // Nothing to do
-                }
-            };
-        }
     }
 }

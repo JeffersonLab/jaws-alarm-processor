@@ -1,24 +1,22 @@
 package org.jlab.kafka.streams;
 
 import org.apache.kafka.streams.*;
-import org.jlab.kafka.alarms.AlarmCategory;
-import org.jlab.kafka.alarms.AlarmLocation;
-import org.jlab.kafka.alarms.DirectCAAlarm;
-import org.jlab.kafka.alarms.RegisteredAlarm;
+import org.jlab.kafka.alarms.ShelvedAlarm;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Instant;
 import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 public class ShelvedTimerTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, RegisteredAlarm> inputTopic;
-    private TestOutputTopic<String, String> outputTopic;
-    private RegisteredAlarm alarm1;
+    private TestInputTopic<String, ShelvedAlarm> inputTopic;
+    private TestOutputTopic<String, ShelvedAlarm> outputTopic;
+    private ShelvedAlarm alarm1;
 
     @Before
     public void setup() {
@@ -31,14 +29,9 @@ public class ShelvedTimerTest {
         inputTopic = testDriver.createInputTopic(ShelvedTimer.INPUT_TOPIC, ShelvedTimer.INPUT_KEY_SERDE.serializer(), ShelvedTimer.INPUT_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(ShelvedTimer.OUTPUT_TOPIC, ShelvedTimer.OUTPUT_KEY_SERDE.deserializer(), ShelvedTimer.OUTPUT_VALUE_SERDE.deserializer());
 
-        DirectCAAlarm direct = new DirectCAAlarm();
-        direct.setPv("channel1");
-        alarm1 = new RegisteredAlarm();
-        alarm1.setProducer(direct);
-        alarm1.setCategory(AlarmCategory.Magnet);
-        alarm1.setLocation(AlarmLocation.INJ);
-        alarm1.setDocurl("/");
-        alarm1.setEdmpath("/");
+        alarm1 = new ShelvedAlarm();
+        alarm1.setReason("Testing");
+        alarm1.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
     }
 
     @After
@@ -50,7 +43,7 @@ public class ShelvedTimerTest {
     public void matchedTombstoneMsg() {
         inputTopic.pipeInput("alarm1", alarm1);
         inputTopic.pipeInput("alarm1", null);
-        KeyValue<String, String> result = outputTopic.readKeyValuesToList().get(1);
+        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(1);
         Assert.assertNull(result.value);
     }
 
@@ -64,7 +57,7 @@ public class ShelvedTimerTest {
     @Test
     public void regularMsg() {
         inputTopic.pipeInput("alarm1", alarm1);
-        KeyValue<String, String> result = outputTopic.readKeyValue();
+        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValue();
         Assert.assertEquals("{\"topic\":\"active-alarms\",\"channel\":\"channel1\"}", result.key);
         Assert.assertEquals("{\"mask\":\"a\",\"outkey\":\"alarm1\"}", result.value);
     }
