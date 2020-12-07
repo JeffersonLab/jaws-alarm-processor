@@ -6,9 +6,12 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.processor.PunctuationType;
 import org.jlab.kafka.alarms.ShelvedAlarm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -16,12 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.*;
-import java.util.logging.Logger;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 public class ShelvedTimer {
-    private static final Logger LOGGER = Logger.getLogger("org.jlab.kafka.streams.ShelvedTimer");
+    private static final Logger log = LoggerFactory.getLogger(ShelvedTimer.class);
 
     public static final String INPUT_TOPIC = "shelved-alarms";
     public static final String OUTPUT_TOPIC = INPUT_TOPIC;
@@ -31,12 +33,10 @@ public class ShelvedTimer {
     public static final Serde<String> OUTPUT_KEY_SERDE = INPUT_KEY_SERDE;
     public static final SpecificAvroSerde<ShelvedAlarm> OUTPUT_VALUE_SERDE = INPUT_VALUE_SERDE;
 
-    public static ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
-
     /**
      * Enumerations of all channels with expiration timers, mapped to the cancellable Executor handle.
      */
-    public static Map<String, ScheduledFuture> channelHandleMap = new ConcurrentHashMap<>();
+    public static Map<String, Cancellable> channelHandleMap = new ConcurrentHashMap<>();
 
     static Properties getStreamsConfig() {
 
@@ -92,7 +92,7 @@ public class ShelvedTimer {
          */
         @Override
         public Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>> get() {
-            return new Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>>() {
+            return new Transformer<>() {
                 private ProcessorContext context;
 
                 @Override
@@ -104,29 +104,32 @@ public class ShelvedTimer {
                 public KeyValue<String, ShelvedAlarm> transform(String key, ShelvedAlarm value) {
                     KeyValue<String, ShelvedAlarm> result = null; // null returned to mean no record
 
-                    ScheduledFuture handle = channelHandleMap.get(key);
+                    log.debug("transform: {}={}", key, value);
+
+                    Cancellable handle = channelHandleMap.get(key);
 
                     // Clear expiration timer
-                    if(value == null || value.getExpiration() == null) {
-                        if(handle != null) {
-                            handle.cancel(false);
+                    if (value == null || value.getExpiration() == null) {
+                        if (handle != null) {
+                            handle.cancel();
                         }
                         channelHandleMap.remove(key);
                     } else { // Possibly set timer
-                        context.forward(key, null); // testing!
-                        if(handle != null) {
+                        if (handle != null) {
                             // already running, do nothing!
                         } else {
                             Instant ts = Instant.ofEpochMilli(value.getExpiration());
                             Instant now = Instant.now();
                             long delayInSeconds = Duration.between(now, ts).getSeconds();
-                            if(now.isAfter(ts)) {
+                            if (now.isAfter(ts)) {
                                 delayInSeconds = 0; // If expiration is in the past then expire immediately
                             }
-                            handle = scheduler.schedule(() -> {
+                            log.debug("Scheduling for delay of: {}", delayInSeconds);
+                            handle = context.schedule(Duration.ofSeconds(delayInSeconds), PunctuationType.WALL_CLOCK_TIME, timestamp -> {
+                                log.debug("Punctuation triggered for: {}", key);
                                 context.forward(key, null);
                                 channelHandleMap.remove(key);
-                            },delayInSeconds, TimeUnit.SECONDS);
+                            });
                             channelHandleMap.put(key, handle);
                         }
                     }
@@ -158,7 +161,6 @@ public class ShelvedTimer {
             @Override
             public void run() {
                 streams.close();
-                scheduler.shutdown();
                 latch.countDown();
             }
         });

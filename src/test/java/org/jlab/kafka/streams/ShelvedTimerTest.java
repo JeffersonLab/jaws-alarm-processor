@@ -7,8 +7,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
@@ -17,6 +21,7 @@ public class ShelvedTimerTest {
     private TestInputTopic<String, ShelvedAlarm> inputTopic;
     private TestOutputTopic<String, ShelvedAlarm> outputTopic;
     private ShelvedAlarm alarm1;
+    private ShelvedAlarm alarm2;
 
     @Before
     public void setup() {
@@ -32,6 +37,10 @@ public class ShelvedTimerTest {
         alarm1 = new ShelvedAlarm();
         alarm1.setReason("Testing");
         alarm1.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
+
+        alarm2 = new ShelvedAlarm();
+        alarm2.setReason("Testing");
+        alarm2.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
     }
 
     @After
@@ -40,9 +49,13 @@ public class ShelvedTimerTest {
     }
 
     @Test
-    public void tombstoneMsg() {
-        inputTopic.pipeInput("alarm1", alarm1);
-        inputTopic.pipeInput("alarm1", null);
+    public void tombstoneMsg() throws InterruptedException {
+        List<KeyValue<String, ShelvedAlarm>> keyValues = new ArrayList<>();
+        keyValues.add(KeyValue.pair("alarm1", alarm1));
+        keyValues.add(KeyValue.pair("alarm1", alarm2));
+        inputTopic.pipeKeyValueList(keyValues, Instant.now(), Duration.ofSeconds(5));
+        testDriver.advanceWallClockTime(Duration.ofSeconds(5));
+        //Thread.sleep(6000);
         KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertNull(result.value);
     }
