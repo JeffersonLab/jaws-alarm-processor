@@ -1,7 +1,18 @@
 package org.jlab.kafka.streams;
 
+import org.apache.kafka.streams.*;
+import org.jlab.kafka.alarms.AlarmCategory;
+import org.jlab.kafka.alarms.AlarmLocation;
+import org.jlab.kafka.alarms.DirectCAAlarm;
+import org.jlab.kafka.alarms.RegisteredAlarm;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
+
+import java.util.Properties;
+
+import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 public class ShelvedTimerTest {
     private TopologyTestDriver testDriver;
@@ -11,14 +22,14 @@ public class ShelvedTimerTest {
 
     @Before
     public void setup() {
-        final Properties streamsConfig = Registrations2Epics.getStreamsConfig();
+        final Properties streamsConfig = ShelvedTimer.getStreamsConfig();
         streamsConfig.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
-        final Topology top = Registrations2Epics.createTopology(streamsConfig);
+        final Topology top = ShelvedTimer.createTopology(streamsConfig);
         testDriver = new TopologyTestDriver(top, streamsConfig);
 
         // setup test topics
-        inputTopic = testDriver.createInputTopic(Registrations2Epics.INPUT_TOPIC, Registrations2Epics.INPUT_KEY_SERDE.serializer(), Registrations2Epics.INPUT_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(Registrations2Epics.OUTPUT_TOPIC, Registrations2Epics.OUTPUT_KEY_SERDE.deserializer(), Registrations2Epics.OUTPUT_VALUE_SERDE.deserializer());
+        inputTopic = testDriver.createInputTopic(ShelvedTimer.INPUT_TOPIC, ShelvedTimer.INPUT_KEY_SERDE.serializer(), ShelvedTimer.INPUT_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(ShelvedTimer.OUTPUT_TOPIC, ShelvedTimer.OUTPUT_KEY_SERDE.deserializer(), ShelvedTimer.OUTPUT_VALUE_SERDE.deserializer());
 
         DirectCAAlarm direct = new DirectCAAlarm();
         direct.setPv("channel1");
