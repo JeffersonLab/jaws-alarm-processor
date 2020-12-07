@@ -1,4 +1,4 @@
-# shelved-timer [![Build Status](https://travis-ci.com/JeffersonLab/shelved-timer.svg?branch=master)](https://travis-ci.com/JeffersonLab/shelved-timer)
+# shelved-timer [![Build Status](https://travis-ci.com/JeffersonLab/shelved-timer.svg?branch=main)](https://travis-ci.com/JeffersonLab/shelved-timer)
 A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application to expire shelved alarms in the [kafka-alarm-system](https://github.com/JeffersonLab/kafka-alarm-system).
 
 ---
