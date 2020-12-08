@@ -92,7 +92,7 @@ public class ShelvedTimer {
          */
         @Override
         public Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>> get() {
-            return new Transformer<>() {
+            return new Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>>() {
                 private ProcessorContext context;
 
                 @Override
