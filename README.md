@@ -1,4 +1,4 @@
-# shelved-timer [![Build Status](https://travis-ci.com/JeffersonLab/shelved-timer.svg?branch=main)](https://travis-ci.com/JeffersonLab/shelved-timer)
+# shelved-timer [![Build Status](https://travis-ci.com/JeffersonLab/shelved-timer.svg?branch=main)](https://travis-ci.com/JeffersonLab/shelved-timer) ![Java CI with Gradle](https://github.com/JeffersonLab/shelved-timer/workflows/Java%20CI%20with%20Gradle/badge.svg)
 A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application to expire shelved alarms in the [kafka-alarm-system](https://github.com/JeffersonLab/kafka-alarm-system). The shelved-timer app expires shelved messages with tombstone records to notify clients that the shelved alarm duration is over.   This moves the burden of managing expiration timers off of every client and onto a single app.
 
 ---
