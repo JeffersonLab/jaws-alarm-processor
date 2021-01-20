@@ -27,6 +27,11 @@ docker exec -it console /scripts/list-shelved.py --monitor
 docker exec -it console /scripts/set-shelved.py channel1 --reason "We are testing this alarm" --expirationseconds 5
 ```
 
+**Note**: When developing the app you can mount the build artifact into the container by substituting the `docker-compose up` command with:
+```
+docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
+```
+
 ## Build
 ```
 gradlew build
