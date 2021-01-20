@@ -2,11 +2,15 @@ plugins {
     id 'java'
     id 'application'
     id 'distribution'
-    id 'com.commercehub.gradle.plugin.avro' version '0.21.0'
+    id 'com.commercehub.gradle.plugin.avro' version '0.22.0'
+    id 'com.github.jk1.dependency-license-report' version '1.16'
 }
 
 group 'org.jlab.kafka.streams'
-version '0.1.0'
+version '1.0.0'
+
+ext.confluentVer = '6.0.1'
+ext.kafkaVer = '2.6.0'
 
 tasks.withType(JavaCompile) {
     options.compilerArgs += ["-Xlint:unchecked"]
@@ -21,12 +25,12 @@ repositories {
 }
 
 dependencies {
-    implementation "org.apache.avro:avro:1.10.0"
-    implementation group: 'org.apache.kafka', name: 'kafka-streams', version: '2.6.0'
-    implementation "io.confluent:kafka-streams-avro-serde:6.0.0"
-    implementation group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.30'
-    testImplementation group: 'junit', name: 'junit', version: '4.12'
-    testImplementation group: 'org.apache.kafka', name: 'kafka-streams-test-utils', version: '2.6.0'
+    implementation "org.apache.kafka:kafka-streams:" + kafkaVer,
+            "io.confluent:kafka-streams-avro-serde:" + confluentVer,
+            "org.apache.avro:avro:1.10.1",
+            "org.slf4j:slf4j-log4j12:1.7.30"
+    testImplementation "org.apache.kafka:kafka-streams-test-utils:" + kafkaVer,
+            "junit:junit:4.13.1"
 }
 
 test {
@@ -46,4 +50,37 @@ application {
 
 build {
     dependsOn(installDist)
+}
+
+installDist.dependsOn(generateLicenseReport)
+distTar.dependsOn(generateLicenseReport)
+distZip.dependsOn(generateLicenseReport)
+
+run {
+    classpath += files('config')
+}
+
+distributions {
+    main {
+        contents {
+            from("build/reports/dependency-license") {
+                into "dependency-license"
+            }
+            from('config') {
+                into 'config'
+            }
+        }
+    }
+}
+
+startScripts {
+    classpath += files('config')
+
+    // https://discuss.gradle.org/t/classpath-in-application-plugin-is-building-always-relative-to-app-home-lib-directory/2012
+    doLast {
+        def windowsScriptFile = file getWindowsScript()
+        def unixScriptFile = file getUnixScript()
+        windowsScriptFile.text = windowsScriptFile.text.replace('%APP_HOME%\\lib\\config', '%APP_HOME%\\config')
+        unixScriptFile.text = unixScriptFile.text.replace('$APP_HOME/lib/config', '$APP_HOME/config')
+    }
 }
