@@ -4,6 +4,8 @@ A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application t
 ---
  - [Quick Start with Compose](https://github.com/JeffersonLab/shelved-timer#quick-start-with-compose)
  - [Build](https://github.com/JeffersonLab/shelved-timer#build)
+ - [Configure](https://github.com/JeffersonLab/shelved-timer#configure)
+ - [Deploy](https://github.com/JeffersonLab/shelved-timer#deploy)
  - [Docker](https://github.com/JeffersonLab/shelved-timer#docker)
  - [See Also](https://github.com/JeffersonLab/shelved-timer#see-also)
  ---
