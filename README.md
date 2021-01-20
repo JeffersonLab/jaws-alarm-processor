@@ -20,11 +20,11 @@ docker-compose up
 ```
 3. Monitor for expiration tombstone message 
 ```
-docker exec -it console /scripts/shelved-alarms/list-shelved.py --monitor 
+docker exec -it console /scripts/list-shelved.py --monitor 
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec -it console /scripts/shelved-alarms/set-shelved.py channel1 --reason "We are testing this alarm" --expirationseconds 5
+docker exec -it console /scripts/set-shelved.py channel1 --reason "We are testing this alarm" --expirationseconds 5
 ```
 
 ## Build
