@@ -104,34 +104,48 @@ public class ShelvedTimer {
                 public KeyValue<String, ShelvedAlarm> transform(String key, ShelvedAlarm value) {
                     KeyValue<String, ShelvedAlarm> result = null; // null returned to mean no record
 
-                    log.debug("transform: {}={}", key, value);
+                    log.debug("Handling message: {}={}", key, value);
 
-                    Cancellable handle = channelHandleMap.get(key);
+                    // Get (and remove) timer handle (if exists)
+                    Cancellable handle = channelHandleMap.remove(key);
 
-                    // Clear expiration timer
-                    if (value == null || value.getExpiration() == null) {
-                        if (handle != null) {
-                            handle.cancel();
+                    // If exists, we always cancel timers
+                    if (handle != null) {
+                        log.debug("Timer Cancelled");
+                        handle.cancel();
+                    } else {
+                        log.debug("No Timer exists");
+                    }
+
+                    if (value != null && value.getExpiration() != null) { // Set new timer
+                        Instant ts = Instant.ofEpochMilli(value.getExpiration());
+                        Instant now = Instant.now();
+                        long delayInSeconds = Duration.between(now, ts).getSeconds();
+                        if (now.isAfter(ts)) {
+                            delayInSeconds = 0; // If expiration is in the past then expire immediately
                         }
-                        channelHandleMap.remove(key);
-                    } else { // Possibly set timer
-                        if (handle != null) {
-                            // already running, do nothing!
-                        } else {
-                            Instant ts = Instant.ofEpochMilli(value.getExpiration());
-                            Instant now = Instant.now();
-                            long delayInSeconds = Duration.between(now, ts).getSeconds();
-                            if (now.isAfter(ts)) {
-                                delayInSeconds = 0; // If expiration is in the past then expire immediately
+                        log.debug("Scheduling {} for delay of: {} seconds ", key, delayInSeconds);
+
+                        Cancellable newHandle = context.schedule(Duration.ofSeconds(delayInSeconds), PunctuationType.WALL_CLOCK_TIME, timestamp -> {
+                            log.debug("Punctuation triggered for: {}", key);
+
+                            // Attempt to cancel timer immediately so only run once; can fail if schedule doesn't return fast enough before timer triggered!
+                            Cancellable h = channelHandleMap.remove(key);
+                            if(h != null) {
+                                h.cancel();
                             }
-                            log.debug("Scheduling {} for delay of: {} seconds ", key, delayInSeconds);
-                            handle = context.schedule(Duration.ofSeconds(delayInSeconds), PunctuationType.WALL_CLOCK_TIME, timestamp -> {
-                                log.debug("Punctuation triggered for: {}", key);
-                                context.forward(key, null);
-                                channelHandleMap.remove(key);
-                            });
-                            channelHandleMap.put(key, handle);
+
+                            context.forward(key, null);
+                        });
+
+                        Cancellable oldHandle = channelHandleMap.put(key, newHandle);
+
+                        // This is to ensure we cancel every timer before losing it's handle otherwise it'll run forever (they repeat until cancelled)
+                        if(oldHandle != null) { // This should only happen if timer callback is unable to cancel future runs (because handle assignment in map too slow)
+                            oldHandle.cancel();
                         }
+                    } else {
+                        log.debug("Either null value or null expiration so no timer set!");
                     }
 
                     return result; // We never return anything but null here because records are produced async
