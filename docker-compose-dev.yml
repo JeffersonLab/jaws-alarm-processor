@@ -1,0 +1,7 @@
+---
+version: '3.8'
+
+services:
+  timer:
+    volumes:
+      - ./build/install/shelved-timer:/opt/shelved-timer
