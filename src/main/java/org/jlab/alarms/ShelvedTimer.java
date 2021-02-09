@@ -1,4 +1,4 @@
-package org.jlab.kafka.streams;
+package org.jlab.alarms;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -9,7 +9,6 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
-import org.jlab.alarms.ShelvedAlarm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
