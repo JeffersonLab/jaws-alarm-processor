@@ -1,7 +1,7 @@
 package org.jlab.kafka.streams;
 
 import org.apache.kafka.streams.*;
-import org.jlab.kafka.alarms.ShelvedAlarm;
+import org.jlab.alarms.ShelvedAlarm;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
