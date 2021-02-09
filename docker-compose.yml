@@ -3,14 +3,14 @@ version: '3.8'
 
 services:
   zookeeper:
-    image: debezium/zookeeper:1.4
+    image: debezium/zookeeper:1.4.0.Final
     hostname: zookeeper
     container_name: zookeeper
     ports:
       - "2181:2181"
 
   kafka:
-    image: debezium/kafka:1.4
+    image: debezium/kafka:1.4.0.Final
     hostname: kafka
     container_name: kafka
     depends_on:
