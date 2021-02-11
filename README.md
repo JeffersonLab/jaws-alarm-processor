@@ -28,12 +28,6 @@ docker exec -it console /scripts/client/list-shelved.py --monitor
 ```
 docker exec -it console /scripts/client/set-shelved.py alarm1 --reason "We are testing this alarm" --expirationseconds 5
 ```
-
-**Note**: When developing the app you can mount the build artifact into the container by substituting the `docker-compose up` command with:
-```
-docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
-```
-
 ## Build
 This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
 
@@ -45,6 +39,11 @@ gradlew build
 **Note**: If you do not already have Gradle installed, it will be installed automatically by the wrapper script included in the source
 
 **Note**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
+
+**Note**: When developing the app you can mount the build artifact into the container by substituting the `docker-compose up` command with:
+```
+docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
+```
 
 ## Configure
 Environment Variables
