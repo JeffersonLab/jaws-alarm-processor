@@ -49,7 +49,7 @@ public class AutoOverrideProcessor {
         registry = (registry == null) ? "http://localhost:8081" : registry;
 
         final Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "shelved-timer");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-auto-override-processor");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0); // Disable caching
         props.put(SCHEMA_REGISTRY_URL_CONFIG, registry);

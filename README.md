@@ -85,4 +85,4 @@ docker pull slominskir/jaws-auto-override-processor
 Image hosted on [DockerHub](https://hub.docker.com/r/slominskir/jaws-auto-override-processor)
 
 ## See Also
-   - [Developer Notes](https://github.com/JeffersonLab/shelved-timer/wiki/Developer-Notes)
+   - [Developer Notes](https://github.com/JeffersonLab/jaws-auto-override-processor/wiki/Developer-Notes)
