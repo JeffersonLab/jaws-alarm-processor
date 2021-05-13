@@ -41,7 +41,7 @@ test {
 }
 
 jar {
-    archiveFileName = 'shelved-timer.jar'
+    archiveFileName = 'jaws-auto-override-processor.jar'
 }
 
 application {
