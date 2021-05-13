@@ -2,6 +2,6 @@
 version: '3.8'
 
 services:
-  timer:
+  auto:
     volumes:
       - ./build/install/jaws-auto-override-processor:/opt/jaws-auto-overide-processor
