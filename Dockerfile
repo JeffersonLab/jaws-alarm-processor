@@ -2,8 +2,8 @@ FROM gradle:6.6.1-jdk11 as builder
 
 ARG CUSTOM_CRT_URL
 
-RUN git clone https://github.com/JeffersonLab/shelved-timer \
-    && cd ./shelved-timer \
+RUN git clone https://github.com/JeffersonLab/jaws-auto-override-processor \
+    && cd ./jaws-auto-override-processor \
     && if [ -z "$CUSTOM_CRT_URL" ] ; then echo "No custom cert needed"; else \
         wget -O /usr/local/share/ca-certificates/customcert.crt $CUSTOM_CRT_URL \
         && update-ca-certificates \
@@ -13,7 +13,7 @@ RUN git clone https://github.com/JeffersonLab/shelved-timer \
     && gradle build $OPTIONAL_CERT_ARG \
     && cp -r ./build/install/* /opt \
     && cp ./docker-entrypoint.sh / \
-    && rm -rf /home/gradle/shelved-timer
+    && rm -rf /home/gradle/jaws-auto-override-processor
 
 WORKDIR /
 

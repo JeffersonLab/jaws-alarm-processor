@@ -10,4 +10,4 @@ while [ $(curl -s -o /dev/null -w %{http_code} $url/subjects) -eq 000 ] ; do
   sleep 5
 done
 
-/opt/shelved-timer/bin/shelved-timer
+/opt/jaws-auto-override-processor/bin/jaws-auto-override-processor
