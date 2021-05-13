@@ -31,7 +31,7 @@ docker exec -it jaws /scripts/client/list-overridden.py --monitor
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec -it jaws /scripts/client/set-overridden.py alarm1 --reason "We are testing this alarm" --expirationseconds 5
+docker exec -it jaws /scripts/client/set-overridden.py --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 ## Build
 This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
