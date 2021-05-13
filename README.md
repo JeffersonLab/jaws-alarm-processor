@@ -65,7 +65,7 @@ The Kafka Streams app is a regular Java application, and start scripts are creat
 gradlew assembleDist
 ```
 
-[Releases](https://github.com/JeffersonLab/shelved-timer/releases)
+[Releases](https://github.com/JeffersonLab/jaws-auto-override-processor/releases)
 
 Launch with:
 
