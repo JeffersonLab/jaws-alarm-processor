@@ -1,6 +1,8 @@
-package org.jlab.alarms;
+package org.jlab.jaws;
 
 import org.apache.kafka.streams.*;
+import org.jlab.jaws.entity.ShelvedAlarm;
+import org.jlab.jaws.entity.ShelvedAlarmReason;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -14,7 +16,7 @@ import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
-public class ShelvedTimerTest {
+public class AutoOverrideProcessorTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, ShelvedAlarm> inputTopic;
     private TestOutputTopic<String, ShelvedAlarm> outputTopic;
@@ -23,21 +25,21 @@ public class ShelvedTimerTest {
 
     @Before
     public void setup() {
-        final Properties streamsConfig = ShelvedTimer.getStreamsConfig();
+        final Properties streamsConfig = AutoOverrideProcessor.getStreamsConfig();
         streamsConfig.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
-        final Topology top = ShelvedTimer.createTopology(streamsConfig);
+        final Topology top = AutoOverrideProcessor.createTopology(streamsConfig);
         testDriver = new TopologyTestDriver(top, streamsConfig);
 
         // setup test topics
-        inputTopic = testDriver.createInputTopic(ShelvedTimer.INPUT_TOPIC, ShelvedTimer.INPUT_KEY_SERDE.serializer(), ShelvedTimer.INPUT_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(ShelvedTimer.OUTPUT_TOPIC, ShelvedTimer.OUTPUT_KEY_SERDE.deserializer(), ShelvedTimer.OUTPUT_VALUE_SERDE.deserializer());
+        inputTopic = testDriver.createInputTopic(AutoOverrideProcessor.INPUT_TOPIC, AutoOverrideProcessor.INPUT_KEY_SERDE.serializer(), AutoOverrideProcessor.INPUT_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(AutoOverrideProcessor.OUTPUT_TOPIC, AutoOverrideProcessor.OUTPUT_KEY_SERDE.deserializer(), AutoOverrideProcessor.OUTPUT_VALUE_SERDE.deserializer());
 
         alarm1 = new ShelvedAlarm();
-        alarm1.setReason("Testing");
+        alarm1.setReason(ShelvedAlarmReason.Chattering_Fleeting_Alarm);
         alarm1.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
 
         alarm2 = new ShelvedAlarm();
-        alarm2.setReason("Testing");
+        alarm2.setReason(ShelvedAlarmReason.Chattering_Fleeting_Alarm);
         alarm2.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
     }
 

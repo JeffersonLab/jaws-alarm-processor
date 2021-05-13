@@ -1,4 +1,4 @@
-package org.jlab.alarms;
+package org.jlab.jaws;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -9,6 +9,7 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
+import org.jlab.jaws.entity.ShelvedAlarm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,8 +22,8 @@ import java.util.concurrent.*;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
-public class ShelvedTimer {
-    private static final Logger log = LoggerFactory.getLogger(ShelvedTimer.class);
+public class AutoOverrideProcessor {
+    private static final Logger log = LoggerFactory.getLogger(AutoOverrideProcessor.class);
 
     public static final String INPUT_TOPIC = "shelved-alarms";
     public static final String OUTPUT_TOPIC = INPUT_TOPIC;
@@ -116,7 +117,8 @@ public class ShelvedTimer {
                         log.debug("No Timer exists");
                     }
 
-                    if (value != null && value.getExpiration() != null) { // Set new timer
+
+                    if (value != null && value.getExpiration() > 0) { // Set new timer
                         Instant ts = Instant.ofEpochMilli(value.getExpiration());
                         Instant now = Instant.now();
                         long delayInSeconds = Duration.between(now, ts).getSeconds();
