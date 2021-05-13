@@ -1,20 +1,25 @@
-# shelved-timer [![Java CI with Gradle](https://github.com/JeffersonLab/shelved-timer/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/shelved-timer/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker Image Version (latest semver)](https://img.shields.io/docker/v/slominskir/shelved-timer?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/shelved-timer)
-A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application to expire shelved alarms in [JAWS](https://github.com/JeffersonLab/jaws). The shelved-timer app expires shelved messages with tombstone records to notify clients that the shelved alarm duration is over.   This moves the burden of managing expiration timers off of every client and onto a single app.
+# jaws-auto-override-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-auto-override-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-auto-override-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-auto-override-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-auto-override-processor)
+A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application to handle automated overrides in [JAWS](https://github.com/JeffersonLab/jaws).  Automated overrides include:
+- shelved alarm expiration (continuous and one-shot)
+- on-delays
+- off-delays
+- latching 
+- masking
 
 ---
- - [Quick Start with Compose](https://github.com/JeffersonLab/shelved-timer#quick-start-with-compose)
- - [Build](https://github.com/JeffersonLab/shelved-timer#build)
- - [Configure](https://github.com/JeffersonLab/shelved-timer#configure)
- - [Deploy](https://github.com/JeffersonLab/shelved-timer#deploy)
- - [Docker](https://github.com/JeffersonLab/shelved-timer#docker)
- - [See Also](https://github.com/JeffersonLab/shelved-timer#see-also)
+ - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-auto-override-processor#quick-start-with-compose)
+ - [Build](https://github.com/JeffersonLab/jaws-auto-override-processor#build)
+ - [Configure](https://github.com/JeffersonLab/jaws-auto-override-processor#configure)
+ - [Deploy](https://github.com/JeffersonLab/jaws-auto-override-processor#deploy)
+ - [Docker](https://github.com/JeffersonLab/jaws-auto-override-processor#docker)
+ - [See Also](https://github.com/JeffersonLab/jaws-auto-override-processor#see-also)
  ---
 
 ## Quick Start with Compose 
 1. Grab project
 ```
-git clone https://github.com/JeffersonLab/shelved-timer
-cd shelved-timer
+git clone https://github.com/JeffersonLab/jaws-auto-override-processor
+cd jaws-auto-override-processor
 ```
 2. Launch Docker
 ```
@@ -22,18 +27,18 @@ docker-compose up
 ```
 3. Monitor for expiration tombstone message 
 ```
-docker exec -it console /scripts/client/list-shelved.py --monitor 
+docker exec -it jaws /scripts/client/list-overridden.py --monitor 
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec -it console /scripts/client/set-shelved.py alarm1 --reason "We are testing this alarm" --expirationseconds 5
+docker exec -it jaws /scripts/client/set-overridden.py alarm1 --reason "We are testing this alarm" --expirationseconds 5
 ```
 ## Build
 This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
 
 ```
-git clone https://github.com/JeffersonLab/shelved-timer
-cd shelved-timer
+git clone https://github.com/JeffersonLab/jaws-auto-override-processor
+cd jaws-auto-override-processor
 gradlew build
 ```
 **Note**: If you do not already have Gradle installed, it will be installed automatically by the wrapper script included in the source
@@ -66,18 +71,18 @@ Launch with:
 
 UNIX:
 ```
-bin/shelved-timer
+bin/jaws-auto-override-processor
 ```
 Windows:
 ```
-bin/shelved-timer.bat
+bin/jaws-auto-override-processor.bat
 ```
 
 ## Docker
 ```
-docker pull slominskir/shelved-timer
+docker pull slominskir/jaws-auto-override-processor
 ```
-Image hosted on [DockerHub](https://hub.docker.com/r/slominskir/shelved-timer)
+Image hosted on [DockerHub](https://hub.docker.com/r/slominskir/jaws-auto-override-processor)
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/shelved-timer/wiki/Developer-Notes)
