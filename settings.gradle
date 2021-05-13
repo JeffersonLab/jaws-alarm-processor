@@ -1,7 +1,7 @@
 pluginManagement {
     repositories {
         gradlePluginPortal()
-        jcenter()
+        mavenCentral()
         maven {
             name "JCenter Gradle Plugins"
             url  "https://dl.bintray.com/gradle/gradle-plugins"
@@ -9,4 +9,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'shelved-timer'
+rootProject.name = 'jaws-auto-override-processor'
