@@ -2,6 +2,7 @@ package org.jlab.jaws;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
@@ -14,6 +15,9 @@ import org.jlab.jaws.entity.ShelvedAlarm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -149,6 +153,26 @@ public class AutoOverrideProcessor {
                             Cancellable h = channelHandleMap.remove(key.getName());
                             if(h != null) {
                                 h.cancel();
+                            }
+
+                            Headers headers = context.headers();
+
+                            if(headers != null) {
+                                log.debug("adding headers");
+
+                                String host = "unknown";
+
+                                try {
+                                    host = InetAddress.getLocalHost().getHostName();
+                                } catch (UnknownHostException e) {
+                                    log.debug("Unable to obtain host name");
+                                }
+
+                                headers.add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
+                                headers.add("producer", "jaws-auto-override-processor".getBytes(StandardCharsets.UTF_8));
+                                headers.add("host", host.getBytes(StandardCharsets.UTF_8));
+                            } else{
+                                log.debug("Headers are unavailable");
                             }
 
                             context.forward(key, null);
