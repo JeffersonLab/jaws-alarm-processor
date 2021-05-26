@@ -19,7 +19,6 @@ services:
       - "9092:9092"
     environment:
       ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      CREATE_TOPICS: 'registered-alarms:1:1:compact,active-alarms:1:1:compact,overridden-alarms:1:1:compact'
 
   registry:
     image: confluentinc/cp-schema-registry:6.0.2
@@ -35,7 +34,7 @@ services:
       SCHEMA_REGISTRY_HOST_NAME: registry
 
   jaws:
-    image: slominskir/jaws:2.4.0
+    image: slominskir/jaws:2.6.1
     hostname: jaws
     container_name: jaws
     depends_on:
@@ -47,11 +46,6 @@ services:
       SCHEMA_REGISTRY: "http://registry:8081"
 
   auto:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - CUSTOM_CRT_URL=http://pki.jlab.org/JLabCA.crt
     hostname: auto
     container_name: auto
     depends_on:

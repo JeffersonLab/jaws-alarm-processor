@@ -2,13 +2,14 @@ package org.jlab.jaws;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
+import org.jlab.jaws.entity.OverriddenAlarmKey;
+import org.jlab.jaws.entity.OverriddenAlarmType;
+import org.jlab.jaws.entity.OverriddenAlarmValue;
 import org.jlab.jaws.entity.ShelvedAlarm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,13 +26,13 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class AutoOverrideProcessor {
     private static final Logger log = LoggerFactory.getLogger(AutoOverrideProcessor.class);
 
-    public static final String INPUT_TOPIC = "shelved-alarms";
+    public static final String INPUT_TOPIC = "overridden-alarms";
     public static final String OUTPUT_TOPIC = INPUT_TOPIC;
 
-    public static final Serde<String> INPUT_KEY_SERDE = Serdes.String();
-    public static final SpecificAvroSerde<ShelvedAlarm> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
-    public static final Serde<String> OUTPUT_KEY_SERDE = INPUT_KEY_SERDE;
-    public static final SpecificAvroSerde<ShelvedAlarm> OUTPUT_VALUE_SERDE = INPUT_VALUE_SERDE;
+    public static final SpecificAvroSerde<OverriddenAlarmKey> INPUT_KEY_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<OverriddenAlarmValue> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = INPUT_KEY_SERDE;
+    public static final SpecificAvroSerde<OverriddenAlarmValue> OUTPUT_VALUE_SERDE = INPUT_VALUE_SERDE;
 
     /**
      * Enumerations of all channels with expiration timers, mapped to the cancellable Executor handle.
@@ -68,11 +69,19 @@ public class AutoOverrideProcessor {
         final StreamsBuilder builder = new StreamsBuilder();
         Map<String, String> config = new HashMap<>();
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
+        INPUT_KEY_SERDE.configure(config, true);
         INPUT_VALUE_SERDE.configure(config, false);
 
-        final KStream<String, ShelvedAlarm> input = builder.stream(INPUT_TOPIC, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> input = builder.stream(INPUT_TOPIC, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
 
-        final KStream<String, ShelvedAlarm> output = input.transform(new MsgTransformerFactory());
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> shelvedOnly = input.filter(new Predicate<OverriddenAlarmKey, OverriddenAlarmValue>() {
+            @Override
+            public boolean test(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                return key.getType() == OverriddenAlarmType.Shelved;
+            }
+        });
+
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> output = shelvedOnly.transform(new MsgTransformerFactory());
 
         output.to(OUTPUT_TOPIC, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
@@ -83,7 +92,7 @@ public class AutoOverrideProcessor {
      * Factory to create Kafka Streams Transformer instances; references a stateStore to maintain previous
      * RegisteredAlarms.
      */
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
 
         /**
          * Return a new {@link Transformer} instance.
@@ -91,8 +100,8 @@ public class AutoOverrideProcessor {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>> get() {
-            return new Transformer<String, ShelvedAlarm, KeyValue<String, ShelvedAlarm>>() {
+        public Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> get() {
+            return new Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
                 private ProcessorContext context;
 
                 @Override
@@ -101,13 +110,13 @@ public class AutoOverrideProcessor {
                 }
 
                 @Override
-                public KeyValue<String, ShelvedAlarm> transform(String key, ShelvedAlarm value) {
-                    KeyValue<String, ShelvedAlarm> result = null; // null returned to mean no record
+                public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> transform(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                    KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = null; // null returned to mean no record
 
                     log.debug("Handling message: {}={}", key, value);
 
                     // Get (and remove) timer handle (if exists)
-                    Cancellable handle = channelHandleMap.remove(key);
+                    Cancellable handle = channelHandleMap.remove(key.getName());
 
                     // If exists, we always cancel timers
                     if (handle != null) {
@@ -118,8 +127,14 @@ public class AutoOverrideProcessor {
                     }
 
 
-                    if (value != null && value.getExpiration() > 0) { // Set new timer
-                        Instant ts = Instant.ofEpochMilli(value.getExpiration());
+                    ShelvedAlarm sa = null;
+
+                    if(value != null && value.getMsg() instanceof ShelvedAlarm) {
+                        sa = (ShelvedAlarm) value.getMsg();
+                    }
+
+                    if (sa != null && sa.getExpiration() > 0) { // Set new timer
+                        Instant ts = Instant.ofEpochMilli(sa.getExpiration());
                         Instant now = Instant.now();
                         long delayInSeconds = Duration.between(now, ts).getSeconds();
                         if (now.isAfter(ts)) {
@@ -131,7 +146,7 @@ public class AutoOverrideProcessor {
                             log.debug("Punctuation triggered for: {}", key);
 
                             // Attempt to cancel timer immediately so only run once; can fail if schedule doesn't return fast enough before timer triggered!
-                            Cancellable h = channelHandleMap.remove(key);
+                            Cancellable h = channelHandleMap.remove(key.getName());
                             if(h != null) {
                                 h.cancel();
                             }
@@ -139,7 +154,7 @@ public class AutoOverrideProcessor {
                             context.forward(key, null);
                         });
 
-                        Cancellable oldHandle = channelHandleMap.put(key, newHandle);
+                        Cancellable oldHandle = channelHandleMap.put(key.getName(), newHandle);
 
                         // This is to ensure we cancel every timer before losing it's handle otherwise it'll run forever (they repeat until cancelled)
                         if(oldHandle != null) { // This should only happen if timer callback is unable to cancel future runs (because handle assignment in map too slow)

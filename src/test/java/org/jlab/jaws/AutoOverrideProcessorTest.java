@@ -1,8 +1,7 @@
 package org.jlab.jaws;
 
 import org.apache.kafka.streams.*;
-import org.jlab.jaws.entity.ShelvedAlarm;
-import org.jlab.jaws.entity.ShelvedAlarmReason;
+import org.jlab.jaws.entity.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -18,8 +17,8 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class AutoOverrideProcessorTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, ShelvedAlarm> inputTopic;
-    private TestOutputTopic<String, ShelvedAlarm> outputTopic;
+    private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopic;
+    private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputTopic;
     private ShelvedAlarm alarm1;
     private ShelvedAlarm alarm2;
 
@@ -50,31 +49,31 @@ public class AutoOverrideProcessorTest {
 
     @Test
     public void tombstoneMsg() throws InterruptedException {
-        List<KeyValue<String, ShelvedAlarm>> keyValues = new ArrayList<>();
-        keyValues.add(KeyValue.pair("alarm1", alarm1));
-        keyValues.add(KeyValue.pair("alarm1", alarm2));
+        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> keyValues = new ArrayList<>();
+        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm1)));
+        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm2)));
         inputTopic.pipeKeyValueList(keyValues, Instant.now(), Duration.ofSeconds(5));
         testDriver.advanceWallClockTime(Duration.ofSeconds(5));
-        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(0);
+        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertNull(result.value);
     }
 
     @Test
     public void notYetExpired() {
-        inputTopic.pipeInput("alarm1", alarm1);
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm1));
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopic.pipeInput("alarm2", alarm2);
-        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValuesToList().get(0);
-        Assert.assertEquals("alarm1", result.key);
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm2", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm2));
+        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValuesToList().get(0);
+        Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertNull(result.value);
     }
 
     @Test
     public void expired() {
-        inputTopic.pipeInput("alarm1", alarm1);
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm1));
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        KeyValue<String, ShelvedAlarm> result = outputTopic.readKeyValue();
-        Assert.assertEquals("alarm1", result.key);
+        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValue();
+        Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertNull(result.value);
     }
 }

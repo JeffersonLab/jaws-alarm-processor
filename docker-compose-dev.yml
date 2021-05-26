@@ -3,5 +3,11 @@ version: '3.8'
 
 services:
   auto:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - CUSTOM_CRT_URL=http://pki.jlab.org/JLabCA.crt
     volumes:
+      - ./docker-entrypoint.sh:/docker-entrypoint.sh
       - ./build/install/jaws-auto-override-processor:/opt/jaws-auto-overide-processor
