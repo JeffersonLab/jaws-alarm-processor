@@ -3,8 +3,4 @@ version: '3.8'
 
 services:
   auto:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - CUSTOM_CRT_URL=http://pki.jlab.org/JLabCA.crt
+    image: slominskir/jaws-auto-override-processor:1.2.0
