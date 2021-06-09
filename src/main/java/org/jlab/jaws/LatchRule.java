@@ -66,17 +66,19 @@ public class LatchRule extends AutoOverrideRule {
 
         KTable<String, RegisteredActive> registeredActive = registeredTable.join(activeTable, new RegisteredActiveJoiner(), Materialized.with(Serdes.String(), REGISTERED_ACTIVE_VALUE_SERDE));
 
-        // Now map into overridden-alarms topic format conditionally
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = registeredActive.toStream().map(new KeyValueMapper<String, RegisteredActive, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
+        // Only allow messages indicating an alarm is both active and latching to pass
+        KStream<String, RegisteredActive> latchable = registeredActive.toStream().filter(new Predicate<String, RegisteredActive>() {
+            @Override
+            public boolean test(String key, RegisteredActive value) {
+                return value.getActive() && value.getLatching();
+            }
+        });
+
+        // Now map into overridden-alarms topic format
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = latchable.map(new KeyValueMapper<String, RegisteredActive, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
             @Override
             public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, RegisteredActive value) {
-                OverriddenAlarmValue overriddenValue = null;
-
-                if(value.getActive() && value.getLatching()) {
-                    overriddenValue = new OverriddenAlarmValue(new LatchedAlarm());
-                }
-
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), overriddenValue);
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
             }
         }, Named.as("Map-Latch"));
 

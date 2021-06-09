@@ -63,27 +63,12 @@ public class LatchRuleTest {
     }
 
     @Test
-    public void otherOverridesMixedIn() {
-        // TODO: make sure processor ignores other overrides
-    }
-
-    @Test
-    public void tombstoneMsg() {
-        // TODO: This auto processor should NOT be doing any acknowledgements (no null payloads)...
-    }
-
-    @Test
     public void notLatching() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegistered.pipeInput("alarm1", registered2);
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(1, results.size());
-
-        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = results.get(0);
-
-        Assert.assertEquals("alarm1", result.key.getName());
-        Assert.assertNull(result.value);
+        Assert.assertEquals(0, results.size());
     }
 
     @Test
