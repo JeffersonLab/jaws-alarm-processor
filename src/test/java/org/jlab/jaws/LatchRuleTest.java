@@ -37,7 +37,7 @@ public class LatchRuleTest {
         // setup test topics
         inputTopicRegistered = testDriver.createInputTopic(LatchRule.INPUT_TOPIC_REGISTERED, LatchRule.INPUT_KEY_REGISTERED_SERDE.serializer(), LatchRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
         inputTopicActive = testDriver.createInputTopic(LatchRule.INPUT_TOPIC_ACTIVE, LatchRule.INPUT_KEY_ACTIVE_SERDE.serializer(), LatchRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(ShelveExpirationRule.OUTPUT_TOPIC, ShelveExpirationRule.OUTPUT_KEY_SERDE.deserializer(), ShelveExpirationRule.OUTPUT_VALUE_SERDE.deserializer());
+        outputTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC, LatchRule.OUTPUT_KEY_SERDE.deserializer(), LatchRule.OUTPUT_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
         registered2 = new RegisteredAlarm();
@@ -70,7 +70,7 @@ public class LatchRuleTest {
     public void notLatching() throws InterruptedException {
     }
 
-    /*@Test
+    @Test
     public void latching() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
@@ -81,6 +81,6 @@ public class LatchRuleTest {
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = results.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
-        Assert.assertNull(result.value);
-    }*/
+        Assert.assertEquals(new OverriddenAlarmValue(new LatchedAlarm()), result.value);
+    }
 }
