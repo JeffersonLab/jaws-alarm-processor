@@ -15,7 +15,7 @@ import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
-public class AutoOverrideProcessorTest {
+public class ShelveExpirationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopic;
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputTopic;
@@ -24,14 +24,16 @@ public class AutoOverrideProcessorTest {
 
     @Before
     public void setup() {
-        final Properties streamsConfig = AutoOverrideProcessor.getStreamsConfig();
-        streamsConfig.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
-        final Topology top = AutoOverrideProcessor.createTopology(streamsConfig);
-        testDriver = new TopologyTestDriver(top, streamsConfig);
+        final ShelveExpirationRule rule = new ShelveExpirationRule();
+
+        final Properties props = rule.constructProperties();
+        props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
+        final Topology top = rule.constructTopology(props);
+        testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopic = testDriver.createInputTopic(AutoOverrideProcessor.INPUT_TOPIC, AutoOverrideProcessor.INPUT_KEY_SERDE.serializer(), AutoOverrideProcessor.INPUT_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(AutoOverrideProcessor.OUTPUT_TOPIC, AutoOverrideProcessor.OUTPUT_KEY_SERDE.deserializer(), AutoOverrideProcessor.OUTPUT_VALUE_SERDE.deserializer());
+        inputTopic = testDriver.createInputTopic(ShelveExpirationRule.INPUT_TOPIC, ShelveExpirationRule.INPUT_KEY_SERDE.serializer(), ShelveExpirationRule.INPUT_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(ShelveExpirationRule.OUTPUT_TOPIC, ShelveExpirationRule.OUTPUT_KEY_SERDE.deserializer(), ShelveExpirationRule.OUTPUT_VALUE_SERDE.deserializer());
 
         alarm1 = new ShelvedAlarm();
         alarm1.setReason(ShelvedAlarmReason.Chattering_Fleeting_Alarm);
