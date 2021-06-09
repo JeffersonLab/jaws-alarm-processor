@@ -70,13 +70,13 @@ public class LatchRule extends AutoOverrideRule {
         final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = registeredActive.toStream().map(new KeyValueMapper<String, RegisteredActive, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
             @Override
             public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, RegisteredActive value) {
-                KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> record = null;
+                OverriddenAlarmValue overriddenValue = null;
 
                 if(value.getActive() && value.getLatching()) {
-                    record = new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
+                    overriddenValue = new OverriddenAlarmValue(new LatchedAlarm());
                 }
 
-                return record;
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), overriddenValue);
             }
         }, Named.as("Map-Latch"));
 
