@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "RegisteredActive",
+  "namespace": "org.jlab.jaws.entity",
+  "fields": [
+    {
+      "name": "active",
+      "type": "boolean",
+      "default": false,
+      "doc": "true if active"
+    },
+    {
+      "name": "latching",
+      "type": "boolean",
+      "default": false,
+      "doc": "true if a latching alarm"
+    }
+  ]
+}
