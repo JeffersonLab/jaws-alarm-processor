@@ -3,4 +3,4 @@ version: '3.8'
 
 services:
   auto:
-    image: slominskir/jaws-auto-override-processor:1.2.0
+    image: slominskir/jaws-auto-override-processor:1.3.0
