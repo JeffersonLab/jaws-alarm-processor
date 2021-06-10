@@ -22,24 +22,18 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
  */
 public class OneShotRule extends AutoOverrideRule {
 
-    private static final Logger log = LoggerFactory.getLogger(OneShotRule.class);
-
     public static final String OUTPUT_TOPIC = "overridden-alarms";
-
     public static final String INPUT_TOPIC_OVERRIDDEN = "overridden-alarms";
     public static final String INPUT_TOPIC_ACTIVE = "active-alarms";
-
     public static final SpecificAvroSerde<OverriddenAlarmKey> INPUT_KEY_OVERRIDDEN_SERDE = new SpecificAvroSerde<>();
     public static final Serdes.StringSerde INPUT_KEY_ACTIVE_SERDE = new Serdes.StringSerde();
-
     public static final SpecificAvroSerde<OverriddenAlarmValue> INPUT_VALUE_OVERRIDDEN_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<ActiveAlarm> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
-
     public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OUTPUT_VALUE_SERDE = new SpecificAvroSerde<>();
-
     public static final Serdes.StringSerde ONESHOT_JOIN_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<OneShotJoin> ONESHOT_JOIN_VALUE_SERDE = new SpecificAvroSerde<>();
+    private static final Logger log = LoggerFactory.getLogger(OneShotRule.class);
 
     @Override
     public Properties constructProperties() {
@@ -73,19 +67,39 @@ public class OneShotRule extends AutoOverrideRule {
         final KTable<String, ActiveAlarm> activeTable = builder.table(INPUT_TOPIC_ACTIVE,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
-        KStream<String, OverriddenAlarmValue> rekeyed = overriddenTable.toStream().selectKey(new KeyValueMapper<OverriddenAlarmKey, OverriddenAlarmValue, String>() {
-            @Override
-            public String apply(OverriddenAlarmKey key, OverriddenAlarmValue value) {
-                log.info("Rekeying: {}", key);
-                return key.getName();
-            }
-        });
+        KGroupedTable<String, OverriddenAlarmValue> rekeyed = overriddenTable.groupBy(
+                new KeyValueMapper<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<String, OverriddenAlarmValue>>() {
+                    @Override
+                    public KeyValue<String, OverriddenAlarmValue> apply(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                        log.info("Rekey: {}", key);
+                        return new KeyValue<>(key.getName(), value);
+                    }
+                }, Grouped.with(ONESHOT_JOIN_KEY_SERDE, INPUT_VALUE_OVERRIDDEN_SERDE));
 
-        KStream<String, OneShotJoin> oneShotJoined = rekeyed.leftJoin(activeTable,
-                new OneShotJoiner(), Joined.with(ONESHOT_JOIN_KEY_SERDE, INPUT_VALUE_OVERRIDDEN_SERDE, INPUT_VALUE_ACTIVE_SERDE));
+        KTable<String, OverriddenAlarmValue> grouped = rekeyed.aggregate(new Initializer<OverriddenAlarmValue>() {
+            @Override
+            public OverriddenAlarmValue apply() {
+                return null;
+            }
+        }, new Aggregator<String, OverriddenAlarmValue, OverriddenAlarmValue>() {
+            @Override
+            public OverriddenAlarmValue apply(String key, OverriddenAlarmValue value, OverriddenAlarmValue aggregate) {
+                log.info("adder: {}, {}, {}", key, value, aggregate);
+                return value;
+            }
+        }, new Aggregator<String, OverriddenAlarmValue, OverriddenAlarmValue>() {
+            @Override
+            public OverriddenAlarmValue apply(String key, OverriddenAlarmValue value, OverriddenAlarmValue aggregate) {
+                log.info("subtractor: {}, {}, {}", key, value, aggregate);
+                return value;
+            }
+        }, Materialized.with(ONESHOT_JOIN_KEY_SERDE, INPUT_VALUE_OVERRIDDEN_SERDE));
+
+        KTable<String, OneShotJoin> oneShotJoined = grouped.outerJoin(activeTable,
+                new OneShotJoiner(), Materialized.with(ONESHOT_JOIN_KEY_SERDE, ONESHOT_JOIN_VALUE_SERDE));
 
         // Only allow messages indicating an alarm is both inactive (null / active tombstone) and oneshot to pass
-        KStream<String, OneShotJoin> filtered = oneShotJoined.filter(new Predicate<String, OneShotJoin>() {
+        KStream<String, OneShotJoin> filtered = oneShotJoined.toStream().filter(new Predicate<String, OneShotJoin>() {
             @Override
             public boolean test(String key, OneShotJoin value) {
                 log.info("filtering oneshot: {}={}", key, value);
@@ -112,8 +126,8 @@ public class OneShotRule extends AutoOverrideRule {
         public OneShotJoin apply(OverriddenAlarmValue override, ActiveAlarm active) {
             boolean oneshot = false;
 
-            if(override.getMsg() instanceof ShelvedAlarm) {
-                ShelvedAlarm shelved = (ShelvedAlarm)override.getMsg();
+            if (override != null && override.getMsg() instanceof ShelvedAlarm) {
+                ShelvedAlarm shelved = (ShelvedAlarm) override.getMsg();
                 oneshot = shelved.getOneshot();
             }
 
