@@ -21,6 +21,7 @@ public class AutoOverrideProcessor {
 
         rules.add(new ShelveExpirationRule());
         rules.add(new LatchRule());
+        rules.add(new OneShotRule());
 
         final CountDownLatch latch = new CountDownLatch(1);
 
