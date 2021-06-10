@@ -17,6 +17,9 @@ import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
+/**
+ * Adds a Latched override for alarms registered as latching that become active.
+ */
 public class LatchRule extends AutoOverrideRule {
 
     private static final Logger log = LoggerFactory.getLogger(LatchRule.class);
@@ -35,7 +38,7 @@ public class LatchRule extends AutoOverrideRule {
     public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OUTPUT_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<RegisteredActive> REGISTERED_ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<LatchJoin> REGISTERED_ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     @Override
     public Properties constructProperties() {
@@ -68,21 +71,21 @@ public class LatchRule extends AutoOverrideRule {
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
 
-        KTable<String, RegisteredActive> registeredActive = registeredTable.join(activeTable, new RegisteredActiveJoiner(), Materialized.with(Serdes.String(), REGISTERED_ACTIVE_VALUE_SERDE));
+        KTable<String, LatchJoin> latchJoined = registeredTable.join(activeTable, new LatchJoiner(), Materialized.with(Serdes.String(), REGISTERED_ACTIVE_VALUE_SERDE));
 
         // Only allow messages indicating an alarm is both active and latching to pass
-        KStream<String, RegisteredActive> latchable = registeredActive.toStream().filter(new Predicate<String, RegisteredActive>() {
+        KStream<String, LatchJoin> filtered = latchJoined.toStream().filter(new Predicate<String, LatchJoin>() {
             @Override
-            public boolean test(String key, RegisteredActive value) {
-                log.trace("filtering: {}={}", key, value);
+            public boolean test(String key, LatchJoin value) {
+                log.trace("filtering latched: {}={}", key, value);
                 return value.getActive() && value.getLatching();
             }
         });
 
         // Now map into overridden-alarms topic format
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = latchable.map(new KeyValueMapper<String, RegisteredActive, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = filtered.map(new KeyValueMapper<String, LatchJoin, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
             @Override
-            public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, RegisteredActive value) {
+            public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, LatchJoin value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
             }
         }, Named.as("Map-Latch"));
@@ -93,10 +96,10 @@ public class LatchRule extends AutoOverrideRule {
         return builder.build();
     }
 
-    public static class RegisteredActiveJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, RegisteredActive> {
+    public static class LatchJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, LatchJoin> {
 
-        public RegisteredActive apply(RegisteredAlarm registered, ActiveAlarm active) {
-            return RegisteredActive.newBuilder()
+        public LatchJoin apply(RegisteredAlarm registered, ActiveAlarm active) {
+            return LatchJoin.newBuilder()
                     .setActive(active != null)
                     .setLatching(registered == null ? false : registered.getLatching())
                     .build();

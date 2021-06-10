@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "RegisteredActive",
+  "name": "LatchJoin",
   "namespace": "org.jlab.jaws.entity",
   "fields": [
     {
