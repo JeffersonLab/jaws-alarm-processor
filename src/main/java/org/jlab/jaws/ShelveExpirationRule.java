@@ -27,6 +27,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
+/**
+ * Expires Shelved overrides by setting timers.
+ */
 public class ShelveExpirationRule extends AutoOverrideRule {
 
     private static final Logger log = LoggerFactory.getLogger(ShelveExpirationRule.class);
