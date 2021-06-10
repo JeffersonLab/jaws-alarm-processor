@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "name": "OneShotJoin",
+  "namespace": "org.jlab.jaws.entity",
+  "fields": [
+    {
+      "name": "active",
+      "type": "boolean",
+      "default": false,
+      "doc": "true if active"
+    },
+    {
+      "name": "oneshot",
+      "type": "boolean",
+      "default": false,
+      "doc": "true if oneshot shelved"
+    }
+  ]
+}
