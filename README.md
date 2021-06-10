@@ -1,11 +1,11 @@
 # jaws-auto-override-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-auto-override-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-auto-override-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-auto-override-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-auto-override-processor)
 A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application to handle automated overrides in [JAWS](https://github.com/JeffersonLab/jaws).  Automated overrides include:
-- shelved alarm expiration
-- one-shot shelving
-- on-delays
-- off-delays
-- latching 
-- masking
+- **shelve expiration** - Remove Shelved override with an expiration timer
+- **one-shot shelve** - Remove Shelved override when alarm is no longer active for overrides configured as one-shot
+- **on-delay** - Add an OnDelayed override for alarms registered as on-delayed and removes the OnDelay after expiration
+- **off-delay** - Add an OffDelayed override for alarms registered as off-delayed and remove the OffDelay after expiration
+- **latch** - Add a Latched override for alarms registered as latching that become active
+- **mask** - Add a Masked override to an alarm with an active parent alarm and removes the Masked override when the parent alarm is no longer active
 
 ---
  - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-auto-override-processor#quick-start-with-compose)
