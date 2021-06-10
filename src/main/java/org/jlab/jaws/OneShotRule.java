@@ -7,6 +7,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.ProcessorContext;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,13 +121,16 @@ public class OneShotRule extends AutoOverrideRule {
             }
         }, Named.as("Map-OneShot"));
 
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> transformed = out
+                .transform(new AddHeadersFactory());
+
         out.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms-OneShot")
                 .with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
         return builder.build();
     }
 
-    public static class OneShotJoiner implements ValueJoiner<OverriddenAlarmValue, ActiveAlarm, OneShotJoin> {
+    private final class OneShotJoiner implements ValueJoiner<OverriddenAlarmValue, ActiveAlarm, OneShotJoin> {
 
         public OneShotJoin apply(OverriddenAlarmValue override, ActiveAlarm active) {
             boolean oneshot = false;

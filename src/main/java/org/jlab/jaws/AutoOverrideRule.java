@@ -1,15 +1,30 @@
 package org.jlab.jaws;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
+import org.apache.kafka.streams.kstream.Transformer;
+import org.apache.kafka.streams.kstream.TransformerSupplier;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.jlab.jaws.entity.OverriddenAlarmKey;
+import org.jlab.jaws.entity.OverriddenAlarmValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 public abstract class AutoOverrideRule {
+
+    private static final Logger log = LoggerFactory.getLogger(AutoOverrideRule.class);
+
     KafkaStreams streams;
     Properties props;
     Topology top;
@@ -44,5 +59,61 @@ public abstract class AutoOverrideRule {
 
     public void close() {
         streams.close();
+    }
+
+    void setHeaders(ProcessorContext context) {
+        Headers headers = context.headers();
+
+        if (headers != null) {
+            log.debug("adding headers");
+
+            String host = "unknown";
+
+            try {
+                host = InetAddress.getLocalHost().getHostName();
+            } catch (UnknownHostException e) {
+                log.debug("Unable to obtain host name");
+            }
+
+            headers.add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
+            headers.add("producer", "jaws-auto-override-processor".getBytes(StandardCharsets.UTF_8));
+            headers.add("host", host.getBytes(StandardCharsets.UTF_8));
+        } else {
+            log.debug("Headers are unavailable");
+        }
+    }
+
+    public final class AddHeadersFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
+
+        /**
+         * Return a new {@link Transformer} instance.
+         *
+         * @return a new {@link Transformer} instance
+         */
+        @Override
+        public Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> get() {
+            return new Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+                private ProcessorContext context;
+
+                @Override
+                public void init(ProcessorContext context) {
+                    this.context = context;
+                }
+
+                @Override
+                public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> transform(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                    log.debug("Handling message: {}={}", key, value);
+
+                    setHeaders(context);
+
+                    return new KeyValue<>(key, value);
+                }
+
+                @Override
+                public void close() {
+                    // Nothing to do
+                }
+            };
+        }
     }
 }

@@ -78,7 +78,7 @@ public class LatchRule extends AutoOverrideRule {
             @Override
             public boolean test(String key, LatchJoin value) {
                 log.trace("filtering latched: {}={}", key, value);
-                return value.getActive() && value.getLatching();
+                return value != null && value.getActive() && value.getLatching();
             }
         });
 
@@ -90,13 +90,16 @@ public class LatchRule extends AutoOverrideRule {
             }
         }, Named.as("Map-Latch"));
 
-        out.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms")
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> transformed = out
+                .transform(new AddHeadersFactory());
+
+        transformed.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms")
                 .with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
         return builder.build();
     }
 
-    public static class LatchJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, LatchJoin> {
+    private final class LatchJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, LatchJoin> {
 
         public LatchJoin apply(RegisteredAlarm registered, ActiveAlarm active) {
             return LatchJoin.newBuilder()

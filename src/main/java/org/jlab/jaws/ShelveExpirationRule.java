@@ -91,7 +91,7 @@ public class ShelveExpirationRule extends AutoOverrideRule {
      * Factory to create Kafka Streams Transformer instances; references a stateStore to maintain previous
      * RegisteredAlarms.
      */
-    private static final class MsgTransformerFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
+    private final class MsgTransformerFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
 
         /**
          * Return a new {@link Transformer} instance.
@@ -150,25 +150,7 @@ public class ShelveExpirationRule extends AutoOverrideRule {
                                 h.cancel();
                             }
 
-                            Headers headers = context.headers();
-
-                            if(headers != null) {
-                                log.debug("adding headers");
-
-                                String host = "unknown";
-
-                                try {
-                                    host = InetAddress.getLocalHost().getHostName();
-                                } catch (UnknownHostException e) {
-                                    log.debug("Unable to obtain host name");
-                                }
-
-                                headers.add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
-                                headers.add("producer", "jaws-auto-override-processor".getBytes(StandardCharsets.UTF_8));
-                                headers.add("host", host.getBytes(StandardCharsets.UTF_8));
-                            } else{
-                                log.debug("Headers are unavailable");
-                            }
+                            setHeaders(context);
 
                             context.forward(key, null);
                         });
