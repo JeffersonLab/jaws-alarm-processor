@@ -64,16 +64,14 @@ public class OneShotRuleTest {
     @Test
     public void notOneshot() {
         inputTopicActive.pipeInput("alarm1", active1);
-        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), overriddenAlarmValue2);
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(0, results.size());
     }
 
-    /*@Test
+    @Test
     public void oneshot() {
-        inputTopicActive.pipeInput("alarm1", active1);
-        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
+        inputTopicActive.pipeInput("alarm1", null);
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), overriddenAlarmValue1);
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
@@ -81,6 +79,20 @@ public class OneShotRuleTest {
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = results.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
-        Assert.assertEquals(new OverriddenAlarmValue(new LatchedAlarm()), result.value);
+        Assert.assertNull(result.value);
+    }
+
+    /*@Test
+    public void transitionOverTime() {
+        inputTopicActive.pipeInput("alarm1", active1);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), overriddenAlarmValue1);
+        inputTopicActive.pipeInput("alarm1", null);
+        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
+        Assert.assertEquals(1, results.size());
+
+        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = results.get(0);
+
+        Assert.assertEquals("alarm1", result.key.getName());
+        Assert.assertNull(result.value);
     }*/
 }

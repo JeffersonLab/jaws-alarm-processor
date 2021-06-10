@@ -76,18 +76,19 @@ public class OneShotRule extends AutoOverrideRule {
         KStream<String, OverriddenAlarmValue> rekeyed = overriddenTable.toStream().selectKey(new KeyValueMapper<OverriddenAlarmKey, OverriddenAlarmValue, String>() {
             @Override
             public String apply(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                log.info("Rekeying: {}", key);
                 return key.getName();
             }
         });
 
-        KStream<String, OneShotJoin> oneShotJoined = rekeyed.join(activeTable,
+        KStream<String, OneShotJoin> oneShotJoined = rekeyed.leftJoin(activeTable,
                 new OneShotJoiner(), Joined.with(ONESHOT_JOIN_KEY_SERDE, INPUT_VALUE_OVERRIDDEN_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
         // Only allow messages indicating an alarm is both inactive (null / active tombstone) and oneshot to pass
         KStream<String, OneShotJoin> filtered = oneShotJoined.filter(new Predicate<String, OneShotJoin>() {
             @Override
             public boolean test(String key, OneShotJoin value) {
-                log.trace("filtering oneshot: {}={}", key, value);
+                log.info("filtering oneshot: {}={}", key, value);
                 return !value.getActive() && value.getOneshot();
             }
         });
@@ -115,6 +116,8 @@ public class OneShotRule extends AutoOverrideRule {
                 ShelvedAlarm shelved = (ShelvedAlarm)override.getMsg();
                 oneshot = shelved.getOneshot();
             }
+
+            log.info("joining: {}, {}", override, active);
 
             return OneShotJoin.newBuilder()
                     .setActive(active != null)
