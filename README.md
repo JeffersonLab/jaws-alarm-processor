@@ -1,6 +1,7 @@
 # jaws-auto-override-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-auto-override-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-auto-override-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-auto-override-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-auto-override-processor)
 A [Kafka Streams](https://kafka.apache.org/documentation/streams/) application to handle automated overrides in [JAWS](https://github.com/JeffersonLab/jaws).  Automated overrides include:
-- shelved alarm expiration (continuous and one-shot)
+- shelved alarm expiration
+- one-shot shelving
 - on-delays
 - off-delays
 - latching 
