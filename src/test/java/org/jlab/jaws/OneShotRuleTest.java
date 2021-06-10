@@ -7,7 +7,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
@@ -71,9 +70,35 @@ public class OneShotRuleTest {
 
     @Test
     public void oneshot() {
+        System.err.println("Piping active");
         inputTopicActive.pipeInput("alarm1", active1);
+        System.err.println("Piping override");
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), overriddenAlarmValue1);
+        System.err.println("Piping active null");
+        inputTopicActive.pipeInput("alarm1", null); // // Output null to overridden-alarms topic is triggered!
+        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
+        Assert.assertEquals(1, results.size());
+
+        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = results.get(0);
+
+        Assert.assertEquals("alarm1", result.key.getName());
+        Assert.assertNull(result.value);
+    }
+
+    @Test
+    public void oneshotABunch() {
+        System.err.println("Piping active");
+        inputTopicActive.pipeInput("alarm1", active1);
+        System.err.println("Piping override");
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), overriddenAlarmValue1);
+        System.err.println("Piping active null");
+        inputTopicActive.pipeInput("alarm1", null); // Output null to overridden-alarms topic is triggered!
+        System.err.println("Piping active");
+        inputTopicActive.pipeInput("alarm1", active1);
+        System.err.println("Piping active null");
         inputTopicActive.pipeInput("alarm1", null);
+        System.err.println("Piping override");
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), overriddenAlarmValue1);
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(2, results.size());
 

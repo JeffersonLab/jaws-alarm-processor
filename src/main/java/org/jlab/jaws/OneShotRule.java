@@ -67,7 +67,12 @@ public class OneShotRule extends AutoOverrideRule {
         final KTable<String, ActiveAlarm> activeTable = builder.table(INPUT_TOPIC_ACTIVE,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
-        KGroupedTable<String, OverriddenAlarmValue> rekeyed = overriddenTable.groupBy(
+        KGroupedTable<String, OverriddenAlarmValue> rekeyed = overriddenTable.filter(new Predicate<OverriddenAlarmKey, OverriddenAlarmValue>() {
+            @Override
+            public boolean test(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                return key.getType() == OverriddenAlarmType.Shelved;
+            }
+        }).groupBy(
                 new KeyValueMapper<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<String, OverriddenAlarmValue>>() {
                     @Override
                     public KeyValue<String, OverriddenAlarmValue> apply(OverriddenAlarmKey key, OverriddenAlarmValue value) {
@@ -91,7 +96,7 @@ public class OneShotRule extends AutoOverrideRule {
             @Override
             public OverriddenAlarmValue apply(String key, OverriddenAlarmValue value, OverriddenAlarmValue aggregate) {
                 log.info("subtractor: {}, {}, {}", key, value, aggregate);
-                return value;
+                return null;
             }
         }, Materialized.with(ONESHOT_JOIN_KEY_SERDE, INPUT_VALUE_OVERRIDDEN_SERDE));
 
@@ -103,7 +108,7 @@ public class OneShotRule extends AutoOverrideRule {
             @Override
             public boolean test(String key, OneShotJoin value) {
                 log.info("filtering oneshot: {}={}", key, value);
-                return !value.getActive() && value.getOneshot();
+                return value != null && !value.getActive() && value.getOneshot();
             }
         });
 
