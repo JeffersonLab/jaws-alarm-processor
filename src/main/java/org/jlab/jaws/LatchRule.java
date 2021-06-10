@@ -8,6 +8,8 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.jlab.jaws.entity.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +18,8 @@ import java.util.Properties;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 public class LatchRule extends AutoOverrideRule {
+
+    private static final Logger log = LoggerFactory.getLogger(LatchRule.class);
 
     public static final String OUTPUT_TOPIC = "overridden-alarms";
 
@@ -70,6 +74,7 @@ public class LatchRule extends AutoOverrideRule {
         KStream<String, RegisteredActive> latchable = registeredActive.toStream().filter(new Predicate<String, RegisteredActive>() {
             @Override
             public boolean test(String key, RegisteredActive value) {
+                log.trace("filtering: {}={}", key, value);
                 return value.getActive() && value.getLatching();
             }
         });

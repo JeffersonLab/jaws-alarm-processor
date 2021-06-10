@@ -10,4 +10,5 @@ while [ $(curl -s -o /dev/null -w %{http_code} $url/subjects/overridden-alarms-v
   sleep 5
 done
 
+export JAWS_AUTO_OVERRIDE_PROCESSOR_OPTS=-Dlog.dir=/opt/jaws-auto-override-processor/logs
 /opt/jaws-auto-override-processor/bin/jaws-auto-override-processor

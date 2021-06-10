@@ -20,7 +20,7 @@ public class AutoOverrideProcessor {
     public static void main(String[] args) {
 
         rules.add(new ShelveExpirationRule());
-        //rules.add(new LatchRule());
+        rules.add(new LatchRule());
 
         final CountDownLatch latch = new CountDownLatch(1);
 
