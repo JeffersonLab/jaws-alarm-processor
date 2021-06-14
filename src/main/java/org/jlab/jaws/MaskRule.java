@@ -39,7 +39,7 @@ public class MaskRule extends AutoOverrideRule {
     public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OUTPUT_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<LatchJoin> REGISTERED_ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<MaskJoin> REGISTERED_ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     @Override
     public Properties constructProperties() {
@@ -72,37 +72,40 @@ public class MaskRule extends AutoOverrideRule {
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
 
-        KTable<String, LatchJoin> registeredActive = registeredTable.join(activeTable, new RegisteredActiveJoiner(), Materialized.with(Serdes.String(), REGISTERED_ACTIVE_VALUE_SERDE));
+        KTable<String, MaskJoin> maskJoined = registeredTable.join(activeTable, new MaskJoiner(), Materialized.with(Serdes.String(), REGISTERED_ACTIVE_VALUE_SERDE));
 
-        // Only allow messages indicating an alarm is both active and latching to pass
-        KStream<String, LatchJoin> latchable = registeredActive.toStream().filter(new Predicate<String, LatchJoin>() {
+        // Only allow messages indicating an alarm is both active and has a maskedby to pass
+        KStream<String, MaskJoin> filtered = maskJoined.toStream().filter(new Predicate<String, MaskJoin>() {
             @Override
-            public boolean test(String key, LatchJoin value) {
-                log.trace("filtering: {}={}", key, value);
-                return value.getActive() && value.getLatching();
+            public boolean test(String key, MaskJoin value) {
+                log.trace("filtering masked: {}={}", key, value);
+                return value != null && value.getActive() && value.getMaskedby() != null;
             }
         });
 
         // Now map into overridden-alarms topic format
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = latchable.map(new KeyValueMapper<String, LatchJoin, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = filtered.map(new KeyValueMapper<String, MaskJoin, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
             @Override
-            public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, LatchJoin value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
+            public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, MaskJoin value) {
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), new OverriddenAlarmValue(new MaskedAlarm()));
             }
-        }, Named.as("Map-Latch"));
+        }, Named.as("Map-Mask"));
 
-        out.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms")
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> transformed = out
+                .transform(new AddHeadersFactory());
+
+        transformed.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms")
                 .with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
         return builder.build();
     }
 
-    public static class RegisteredActiveJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, LatchJoin> {
+    private final class MaskJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, MaskJoin> {
 
-        public LatchJoin apply(RegisteredAlarm registered, ActiveAlarm active) {
-            return LatchJoin.newBuilder()
+        public MaskJoin apply(RegisteredAlarm registered, ActiveAlarm active) {
+            return MaskJoin.newBuilder()
                     .setActive(active != null)
-                    .setLatching(registered == null ? false : registered.getLatching())
+                    .setMaskedby(registered.getMaskedby())
                     .build();
         }
     }

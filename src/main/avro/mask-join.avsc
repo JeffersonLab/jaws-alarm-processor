@@ -1,0 +1,21 @@
+{
+  "type": "record",
+  "name": "MaskJoin",
+  "namespace": "org.jlab.jaws.entity",
+  "fields": [
+    {
+      "name": "active",
+      "type": "boolean",
+      "default": false,
+      "doc": "true if active"
+    },
+    {
+      "name": "maskedby",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "parent alarm, if any"
+    }
+  ]
+}
