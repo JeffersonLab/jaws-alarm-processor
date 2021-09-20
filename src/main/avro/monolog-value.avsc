@@ -18,6 +18,17 @@
         "ActiveAlarm"
       ],
       "doc": "The alarm activation"
+    },
+    {
+      "name": "overrides",
+      "type": {
+        "type": "array",
+        "items": {
+          "name": "override",
+          "type": "OverriddenAlarmValue"
+        }
+      },
+      "doc": "The alarm overrides"
     }
   ]
 }

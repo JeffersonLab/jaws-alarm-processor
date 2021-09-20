@@ -10,6 +10,7 @@ import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -71,7 +72,8 @@ public class MonologRule extends AutoOverrideRule {
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
 
-        KTable<String, MonologValue> registeredAndActive = registeredTable.join(activeTable, new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE));
+        KTable<String, MonologValue> registeredAndActive = registeredTable.join(activeTable,
+                new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE));
 
 
         final KStream<String, MonologValue> transformed = registeredAndActive.toStream()
@@ -89,6 +91,7 @@ public class MonologRule extends AutoOverrideRule {
             return MonologValue.newBuilder()
                     .setRegistered(registered)
                     .setActive(active)
+                    .setOverrides(new ArrayList<>())
                     .build();
         }
     }

@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -80,6 +81,6 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result = results.get(0);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, active1), result.value);
+        Assert.assertEquals(new MonologValue(registered1, active1, new ArrayList<>()), result.value);
     }
 }
