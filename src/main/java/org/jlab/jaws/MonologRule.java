@@ -41,9 +41,6 @@ public class MonologRule extends AutoOverrideRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final Serdes.StringSerde OVERRIDE_KV_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<OverrideKeyValue> OVERRIDE_KV_VALUE_SERDE = new SpecificAvroSerde<>();
-
     public static final Serdes.StringSerde OVERRIDE_LIST_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
@@ -71,7 +68,6 @@ public class MonologRule extends AutoOverrideRule {
         OVERRIDE_VALUE_SERDE.configure(config, false);
 
         MONOLOG_VALUE_SERDE.configure(config, false);
-        OVERRIDE_KV_VALUE_SERDE.configure(config, false);
         OVERRIDE_LIST_VALUE_SERDE.configure(config, false);
 
         final KTable<String, RegisteredAlarm> registeredTable = builder.table(INPUT_TOPIC_REGISTERED,
