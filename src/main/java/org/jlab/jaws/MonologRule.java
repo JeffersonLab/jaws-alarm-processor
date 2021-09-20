@@ -41,7 +41,6 @@ public class MonologRule extends AutoOverrideRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final Serdes.StringSerde OVERRIDE_LIST_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
     @Override
@@ -109,15 +108,11 @@ public class MonologRule extends AutoOverrideRule {
 
         public MonologValue apply(MonologValue registeredAndActive, OverrideList overrideList) {
 
-            System.err.println("join record before: " + registeredAndActive);
-
             if(overrideList == null) {
                 registeredAndActive.setOverrides(new ArrayList<>());
             } else {
                 registeredAndActive.setOverrides(overrideList.getOverrides());
             }
-
-            System.err.println("join record after: " + registeredAndActive);
 
             return registeredAndActive;
         }
@@ -133,7 +128,7 @@ public class MonologRule extends AutoOverrideRule {
                 .aggregate(
                         () -> new OverrideList(new ArrayList<>()),
                         (key, newValue, aggregate) -> {
-                            System.err.println("add: " + key + ", " + newValue + ", " + aggregate);
+                            //System.err.println("add: " + key + ", " + newValue + ", " + aggregate);
                             if(newValue.getOverrides() != null && aggregate != null && aggregate.getOverrides() != null) {
                                 aggregate.getOverrides().addAll(newValue.getOverrides());
                             }
@@ -141,7 +136,7 @@ public class MonologRule extends AutoOverrideRule {
                             return aggregate;
                         },
                         (key, oldValue, aggregate) -> {
-                            System.err.println("subtract: " + key + ", " + oldValue + ", " + aggregate);
+                            //System.err.println("subtract: " + key + ", " + oldValue + ", " + aggregate);
 
                             ArrayList<OverriddenAlarmValue> tmp = new ArrayList<>(aggregate.getOverrides());
 
