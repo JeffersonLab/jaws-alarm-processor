@@ -23,10 +23,7 @@
       "name": "overrides",
       "type": {
         "type": "array",
-        "items": {
-          "name": "override",
-          "type": "OverriddenAlarmValue"
-        }
+        "items": "OverriddenAlarmValue"
       },
       "doc": "The alarm overrides"
     }
