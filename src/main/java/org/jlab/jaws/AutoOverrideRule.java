@@ -9,6 +9,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.kstream.TransformerSupplier;
 import org.apache.kafka.streams.processor.ProcessorContext;
+import org.jlab.jaws.entity.MonologValue;
 import org.jlab.jaws.entity.OverriddenAlarmKey;
 import org.jlab.jaws.entity.OverriddenAlarmValue;
 import org.slf4j.Logger;
@@ -102,6 +103,40 @@ public abstract class AutoOverrideRule {
 
                 @Override
                 public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> transform(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                    log.debug("Handling message: {}={}", key, value);
+
+                    setHeaders(context);
+
+                    return new KeyValue<>(key, value);
+                }
+
+                @Override
+                public void close() {
+                    // Nothing to do
+                }
+            };
+        }
+    }
+
+    public final class MonologAddHeadersFactory implements TransformerSupplier<String, MonologValue, KeyValue<String, MonologValue>> {
+
+        /**
+         * Return a new {@link Transformer} instance.
+         *
+         * @return a new {@link Transformer} instance
+         */
+        @Override
+        public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
+            return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
+                private ProcessorContext context;
+
+                @Override
+                public void init(ProcessorContext context) {
+                    this.context = context;
+                }
+
+                @Override
+                public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
                     log.debug("Handling message: {}={}", key, value);
 
                     setHeaders(context);

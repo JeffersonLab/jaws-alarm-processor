@@ -1,0 +1,23 @@
+{
+  "type": "record",
+  "name": "MonologValue",
+  "namespace": "org.jlab.jaws.entity",
+  "fields": [
+    {
+      "name": "registered",
+      "type": [
+        "null",
+        "RegisteredAlarm"
+      ],
+      "doc": "The alarm registration"
+    },
+    {
+      "name": "active",
+      "type": [
+        "null",
+        "ActiveAlarm"
+      ],
+      "doc": "The alarm activation"
+    }
+  ]
+}
