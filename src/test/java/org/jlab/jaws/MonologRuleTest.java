@@ -18,6 +18,7 @@ public class MonologRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, RegisteredAlarm> inputTopicRegistered;
     private TestInputTopic<String, ActiveAlarm> inputTopicActive;
+    private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
     private TestOutputTopic<String, MonologValue> outputTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
@@ -36,6 +37,7 @@ public class MonologRuleTest {
         // setup test topics
         inputTopicRegistered = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_REGISTERED, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
         inputTopicActive = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_ACTIVE, MonologRule.INPUT_KEY_ACTIVE_SERDE.serializer(), MonologRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
+        inputTopicOverridden = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_OVERRIDDEN, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(MonologRule.OUTPUT_TOPIC, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
@@ -77,6 +79,41 @@ public class MonologRuleTest {
         inputTopicRegistered.pipeInput("alarm1", registered1);
         List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
+
+        KeyValue<String, MonologValue> result = results.get(0);
+
+        Assert.assertEquals("alarm1", result.key);
+        Assert.assertEquals(new MonologValue(registered1, active1, new ArrayList<>()), result.value);
+    }
+
+    @Test
+    public void addOverride() {
+        inputTopicActive.pipeInput("alarm1", active1);
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
+        inputTopicRegistered.pipeInput("alarm1", registered1);
+
+        OverriddenAlarmValue overriddenAlarmValue1 = new OverriddenAlarmValue();
+        LatchedAlarm latchedAlarm = new LatchedAlarm();
+        overriddenAlarmValue1.setMsg(latchedAlarm);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), overriddenAlarmValue1);
+
+        OverriddenAlarmValue overriddenAlarmValue2 = new OverriddenAlarmValue();
+        DisabledAlarm disabledAlarm = new DisabledAlarm();
+        disabledAlarm.setComments("Testing");
+        overriddenAlarmValue2.setMsg(disabledAlarm);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), overriddenAlarmValue2);
+
+
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), null);
+
+
+        List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
+
+        for(KeyValue<String, MonologValue> result: results) {
+            System.err.println(result);
+        }
+
+        Assert.assertEquals(4, results.size());
 
         KeyValue<String, MonologValue> result = results.get(0);
 

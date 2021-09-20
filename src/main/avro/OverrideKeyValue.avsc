@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "OverrideKeyValue",
+  "namespace": "org.jlab.jaws.entity",
+  "fields": [
+    {
+      "name": "key",
+      "type": "OverriddenAlarmKey"
+    },
+    {
+      "name": "value",
+      "type": [
+        "null",
+        "OverriddenAlarmValue"
+      ]
+    }
+  ]
+}

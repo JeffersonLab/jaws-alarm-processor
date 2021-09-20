@@ -1,0 +1,18 @@
+{
+  "type": "record",
+  "name": "OverrideList",
+  "namespace": "org.jlab.jaws.entity",
+  "fields": [
+    {
+      "name": "overrides",
+      "type": {
+        "type": "array",
+        "items": {
+          "name": "override",
+          "type": "OverriddenAlarmValue"
+        }
+      },
+      "doc": "The alarm overrides"
+    }
+  ]
+}
