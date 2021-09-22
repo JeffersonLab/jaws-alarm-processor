@@ -7,6 +7,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.management.MonitorInfo;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -17,8 +18,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class LatchRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, RegisteredAlarm> inputTopicRegistered;
-    private TestInputTopic<String, ActiveAlarm> inputTopicActive;
+    private TestInputTopic<String, MonologValue> inputTopicMonolog;
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
@@ -32,12 +32,14 @@ public class LatchRuleTest {
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
         final Topology top = rule.constructTopology(props);
+
+        System.err.println(top.describe());
+
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicRegistered = testDriver.createInputTopic(LatchRule.INPUT_TOPIC_REGISTERED, LatchRule.INPUT_KEY_REGISTERED_SERDE.serializer(), LatchRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
-        inputTopicActive = testDriver.createInputTopic(LatchRule.INPUT_TOPIC_ACTIVE, LatchRule.INPUT_KEY_ACTIVE_SERDE.serializer(), LatchRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC, LatchRule.OUTPUT_KEY_SERDE.deserializer(), LatchRule.OUTPUT_VALUE_SERDE.deserializer());
+        inputTopicMonolog = testDriver.createInputTopic(LatchRule.INPUT_TOPIC, LatchRule.MONOLOG_KEY_SERDE.serializer(), LatchRule.MONOLOG_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC_PASSTHROUGH, LatchRule.OVERRIDE_KEY_SERDE.deserializer(), LatchRule.OVERRIDE_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
         registered2 = new RegisteredAlarm();
@@ -64,18 +66,14 @@ public class LatchRuleTest {
 
     @Test
     public void notLatching() {
-        inputTopicActive.pipeInput("alarm1", active1);
-        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicRegistered.pipeInput("alarm1", registered2);
+        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered2, active1, new ArrayList<>()));
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(0, results.size());
     }
 
     @Test
     public void latching() {
-        inputTopicActive.pipeInput("alarm1", active1);
-        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered1, active1, new ArrayList<>()));
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
 
