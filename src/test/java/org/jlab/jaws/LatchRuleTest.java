@@ -76,14 +76,14 @@ public class LatchRuleTest {
 
     //@Test
     public void notLatching() {
-        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered2, class1, active1, new ArrayList<>()));
+        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered2, class1, null, active1, new ArrayList<>()));
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(0, results.size());
     }
 
     //@Test
     public void latching() {
-        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered1, class1, active1, new ArrayList<>()));
+        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered1, class1, null, active1, new ArrayList<>()));
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
 

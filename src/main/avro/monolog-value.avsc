@@ -20,6 +20,14 @@
       "doc": "The alarm class"
     },
     {
+      "name": "effectiveRegistered",
+      "type": [
+        "null",
+        "RegisteredAlarm"
+      ],
+      "doc": "The effective alarm registration accounting for alarm class defaults"
+    },
+    {
       "name": "active",
       "type": [
         "null",

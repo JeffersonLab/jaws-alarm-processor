@@ -25,6 +25,7 @@ public class MonologRuleTest {
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
     private RegisteredClass class1;
+    private RegisteredAlarm effectiveRegistered1;
     private ActiveAlarm active1;
     private ActiveAlarm active2;
 
@@ -70,6 +71,8 @@ public class MonologRuleTest {
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
 
+        effectiveRegistered1 = MonologRule.computeEffectiveRegistration(registered1, class1);
+
         active1 = new ActiveAlarm();
         active2 = new ActiveAlarm();
 
@@ -103,7 +106,7 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result = results.get(1);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, active1, new ArrayList<>()), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>()), result.value);
     }
 
     @Test
@@ -140,6 +143,6 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result = results.get(4);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1))), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1))), result.value);
     }
 }
