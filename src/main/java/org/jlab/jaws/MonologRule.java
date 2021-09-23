@@ -17,7 +17,9 @@ import java.util.*;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 /**
- * Adds a Latched override for alarms registered as latching that become active.
+ * Streams rule to join all the alarm topics into a single topic that is ordered (single partition) such that
+ * processing can be done.   A store of the previous record for each alarm is used to determine what
+ * changed.
  */
 public class MonologRule extends AutoOverrideRule {
 
