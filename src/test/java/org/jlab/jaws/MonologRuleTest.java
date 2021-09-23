@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -17,11 +18,13 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class MonologRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, RegisteredAlarm> inputTopicRegistered;
+    private TestInputTopic<String, RegisteredClass> inputTopicClasses;
     private TestInputTopic<String, ActiveAlarm> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
     private TestOutputTopic<String, MonologValue> outputTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
+    private RegisteredClass class1;
     private ActiveAlarm active1;
     private ActiveAlarm active2;
 
@@ -36,6 +39,7 @@ public class MonologRuleTest {
 
         // setup test topics
         inputTopicRegistered = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_REGISTERED, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
+        inputTopicClasses = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_CLASSES, MonologRule.INPUT_KEY_CLASSES_SERDE.serializer(), MonologRule.INPUT_VALUE_CLASSES_SERDE.serializer());
         inputTopicActive = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_ACTIVE, MonologRule.INPUT_KEY_ACTIVE_SERDE.serializer(), MonologRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
         inputTopicOverridden = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_OVERRIDDEN, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(MonologRule.OUTPUT_TOPIC, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
@@ -50,6 +54,21 @@ public class MonologRuleTest {
         registered2.setClass$("base");
         registered2.setProducer(new SimpleProducer());
         registered2.setLatching(false);
+
+        class1 = new RegisteredClass();
+        class1.setLatching(true);
+        class1.setCategory(AlarmCategory.CAMAC);
+        class1.setFilterable(true);
+        class1.setCorrectiveaction("fix it");
+        class1.setLocation(AlarmLocation.A4);
+        class1.setPriority(AlarmPriority.P3_MINOR);
+        class1.setScreenpath("/tmp");
+        class1.setPointofcontactusername("tester");
+        class1.setRationale("because");
+
+        class1.setMaskedby("alarm1");
+        class1.setOffdelayseconds(5l);
+        class1.setOndelayseconds(5l);
 
         active1 = new ActiveAlarm();
         active2 = new ActiveAlarm();
@@ -77,13 +96,14 @@ public class MonologRuleTest {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicClasses.pipeInput("base", class1);
         List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
 
-        KeyValue<String, MonologValue> result = results.get(0);
+        KeyValue<String, MonologValue> result = results.get(1);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, active1, new ArrayList<>()), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, active1, new ArrayList<>()), result.value);
     }
 
     @Test
@@ -91,6 +111,8 @@ public class MonologRuleTest {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegistered.pipeInput("alarm1", registered1);
+
+        inputTopicClasses.pipeInput("base", class1);
 
         OverriddenAlarmValue overriddenAlarmValue1 = new OverriddenAlarmValue();
         LatchedAlarm latchedAlarm = new LatchedAlarm();
@@ -113,11 +135,11 @@ public class MonologRuleTest {
             System.err.println(result);
         }
 
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(5, results.size());
 
-        KeyValue<String, MonologValue> result = results.get(0);
+        KeyValue<String, MonologValue> result = results.get(4);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, active1, new ArrayList<>()), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1))), result.value);
     }
 }

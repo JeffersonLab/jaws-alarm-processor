@@ -28,13 +28,16 @@ public class MonologRule extends AutoOverrideRule {
     public static final String OUTPUT_TOPIC = "monolog";
 
     public static final String INPUT_TOPIC_REGISTERED = "registered-alarms";
+    public static final String INPUT_TOPIC_CLASSES = "registered-classes";
     public static final String INPUT_TOPIC_ACTIVE = "active-alarms";
     public static final String INPUT_TOPIC_OVERRIDDEN = "overridden-alarms";
 
     public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
+    public static final Serdes.StringSerde INPUT_KEY_CLASSES_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde INPUT_KEY_ACTIVE_SERDE = new Serdes.StringSerde();
 
     public static final SpecificAvroSerde<RegisteredAlarm> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<RegisteredClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<ActiveAlarm> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
@@ -63,6 +66,7 @@ public class MonologRule extends AutoOverrideRule {
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
 
         INPUT_VALUE_REGISTERED_SERDE.configure(config, false);
+        INPUT_VALUE_CLASSES_SERDE.configure(config, false);
         INPUT_VALUE_ACTIVE_SERDE.configure(config, false);
 
         OVERRIDE_KEY_SERDE.configure(config, true);
@@ -73,11 +77,15 @@ public class MonologRule extends AutoOverrideRule {
 
         final KTable<String, RegisteredAlarm> registeredTable = builder.table(INPUT_TOPIC_REGISTERED,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
+        final KTable<String, RegisteredClass> classesTable = builder.table(INPUT_TOPIC_CLASSES,
+                Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
         final KTable<String, ActiveAlarm> activeTable = builder.table(INPUT_TOPIC_ACTIVE,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
+        KTable<String, MonologValue> classesAndRegistered = registeredTable.leftJoin(classesTable,
+                RegisteredAlarm::getClass$, new RegisteredClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE));
 
-        KTable<String, MonologValue> registeredAndActive = registeredTable.join(activeTable,
+        KTable<String, MonologValue> registeredAndActive = classesAndRegistered.join(activeTable,
                 new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE));
 
         KTable<String, OverrideList> overriddenItems = getOverriddenViaGroupBy(builder);
@@ -95,14 +103,23 @@ public class MonologRule extends AutoOverrideRule {
         return builder.build();
     }
 
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, MonologValue> {
+    private final class RegisteredClassJoiner implements ValueJoiner<RegisteredAlarm, RegisteredClass, MonologValue> {
 
-        public MonologValue apply(RegisteredAlarm registered, ActiveAlarm active) {
+        public MonologValue apply(RegisteredAlarm registered, RegisteredClass clazz) {
             return MonologValue.newBuilder()
                     .setRegistered(registered)
-                    .setActive(active)
+                    .setClass$(clazz)
+                    .setActive(null)
                     .setOverrides(new ArrayList<>())
                     .build();
+        }
+    }
+
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<MonologValue, ActiveAlarm, MonologValue> {
+
+        public MonologValue apply(MonologValue registered, ActiveAlarm active) {
+            registered.setActive(active);
+            return registered;
         }
     }
 

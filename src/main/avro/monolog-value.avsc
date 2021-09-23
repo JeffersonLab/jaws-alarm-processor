@@ -12,6 +12,14 @@
       "doc": "The alarm registration"
     },
     {
+      "name": "class",
+      "type": [
+        "null",
+        "RegisteredClass"
+      ],
+      "doc": "The alarm class"
+    },
+    {
       "name": "active",
       "type": [
         "null",
