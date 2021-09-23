@@ -106,7 +106,7 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result = results.get(1);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>()), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result.value);
     }
 
     @Test
@@ -143,6 +143,27 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result = results.get(4);
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1))), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1)), false, false), result.value);
+    }
+
+    @Test
+    public void transitions() {
+        inputTopicActive.pipeInput("alarm1", active1);
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
+        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicClasses.pipeInput("base", class1);
+        inputTopicActive.pipeInput("alarm1", null);
+        inputTopicActive.pipeInput("alarm1", active1);
+
+        List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
+        Assert.assertEquals(4, results.size());
+
+        KeyValue<String, MonologValue> result1 = results.get(1);
+        KeyValue<String, MonologValue> result3 = results.get(3);
+
+        Assert.assertEquals("alarm1", result1.key);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result1.value);
+
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), true, false), result3.value);
     }
 }

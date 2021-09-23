@@ -8,6 +8,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +22,8 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 /**
  * Streams rule to join all the alarm topics into a single topic that is ordered (single partition) such that
- * processing can be done.   A store of the previous record for each alarm is used to determine what
- * changed.
+ * processing can be done.   A store of the previous active record for each alarm is used to determine
+ * transitions from active to normal and back.
  */
 public class MonologRule extends AutoOverrideRule {
 
@@ -94,10 +98,23 @@ public class MonologRule extends AutoOverrideRule {
                 .outerJoin(overriddenItems, new OverrideJoiner(),
                         Named.as("Plus-Overrides"));
 
-        final KStream<String, MonologValue> transformed = plusOverrides.toStream()
+        final StoreBuilder<KeyValueStore<String, ActiveAlarm>> storeBuilder = Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore("PreviousActiveStateStore"),
+                INPUT_KEY_ACTIVE_SERDE,
+                INPUT_VALUE_ACTIVE_SERDE
+        ).withCachingEnabled();
+
+        builder.addStateStore(storeBuilder);
+
+        final KStream<String, MonologValue> withTransitionState = plusOverrides.toStream()
+                .transform(new MonologRule.MsgTransformerFactory(storeBuilder.name()),
+                        Named.as("ActiveTransitionStateProcessor"),
+                        storeBuilder.name());
+
+        final KStream<String, MonologValue> withHeaders = withTransitionState
                 .transform(new MonologAddHeadersFactory());
 
-        transformed.to(OUTPUT_TOPIC, Produced.as("Monolog")
+        withHeaders.to(OUTPUT_TOPIC, Produced.as("Monolog")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
@@ -141,6 +158,8 @@ public class MonologRule extends AutoOverrideRule {
                     .setEffectiveRegistered(effectiveRegistered)
                     .setActive(null)
                     .setOverrides(new ArrayList<>())
+                    .setTransitionToActive(false)
+                    .setTransitionToNormal(false)
                     .build();
         }
     }
@@ -203,5 +222,79 @@ public class MonologRule extends AutoOverrideRule {
         List<OverriddenAlarmValue> list = new ArrayList<>();
         list.add(value);
         return new KeyValue<>(key.getName(), new OverrideList(list));
+    }
+
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, MonologValue, KeyValue<String, MonologValue>> {
+
+        private final String storeName;
+
+        /**
+         * Create a new MsgTransformerFactory.
+         *
+         * @param storeName The state store name
+         */
+        public MsgTransformerFactory(String storeName) {
+            this.storeName = storeName;
+        }
+
+        /**
+         * Return a new {@link Transformer} instance.
+         *
+         * @return a new {@link Transformer} instance
+         */
+        @Override
+        public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
+            return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
+                private KeyValueStore<String, ActiveAlarm> store;
+                private ProcessorContext context;
+
+                @Override
+                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
+                public void init(ProcessorContext context) {
+                    this.context = context;
+                    this.store = (KeyValueStore<String, ActiveAlarm>) context.getStateStore(storeName);
+                }
+
+                @Override
+                public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
+                    ActiveAlarm previous = store.get(key);
+                    ActiveAlarm next = null;
+
+                    System.err.println("previous: " + previous);
+                    System.err.println("next: " + (value == null ? null : value.getActive()));
+
+                    boolean transitionToActive = false;
+                    boolean transitionToNormal = false;
+
+                    if(value != null) {
+                        next = value.getActive();
+                    }
+
+                    if (previous == null && next != null) {
+                        System.err.println("TRANSITION TO ACTIVE!");
+                        transitionToActive = true;
+                    } else if(previous != null && next == null) {
+                        System.err.println("TRANSITION TO NORMAL!");
+                        transitionToNormal = true;
+                    }
+
+                    store.put(key, next);
+
+                    if(value != null) {
+                        value.setTransitionToActive(transitionToActive);
+                        value.setTransitionToNormal(transitionToNormal);
+                    }
+
+                    log.trace("Transformed: {}={}", key, value);
+
+                    return new KeyValue<>(key, value);
+                }
+
+                @Override
+                public void close() {
+                    // Nothing to do
+                }
+            };
+        }
     }
 }

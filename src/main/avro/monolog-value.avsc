@@ -42,6 +42,16 @@
         "items": "OverriddenAlarmValue"
       },
       "doc": "The alarm overrides"
+    },
+    {
+      "name": "transitionToActive",
+      "type": "boolean",
+      "doc": "true when record is first one to indicate Active after being Normal"
+    },
+    {
+      "name": "transitionToNormal",
+      "type": "boolean",
+      "doc": "true when record is first one to indicate Normal after being Active"
     }
   ]
 }
