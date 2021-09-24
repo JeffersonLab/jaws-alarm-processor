@@ -148,22 +148,46 @@ public class MonologRuleTest {
 
     @Test
     public void transitions() {
+        inputTopicClasses.pipeInput("base", class1);
+        inputTopicRegistered.pipeInput("alarm1", registered1);
+
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicRegistered.pipeInput("alarm1", registered1);
-        inputTopicClasses.pipeInput("base", class1);
+
         inputTopicActive.pipeInput("alarm1", null);
+
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
+        inputTopicActive.pipeInput("alarm1", active1);
+
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicActive.pipeInput("alarm1", active1);
 
         List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(4, results.size());
+        Assert.assertEquals(5, results.size());
 
+
+
+        System.err.println("\n\n\n");
+        for(KeyValue<String, MonologValue> result: results) {
+            System.err.println(result);
+        }
+
+        KeyValue<String, MonologValue> result0 = results.get(0);
         KeyValue<String, MonologValue> result1 = results.get(1);
+        KeyValue<String, MonologValue> result2 = results.get(2);
         KeyValue<String, MonologValue> result3 = results.get(3);
+        KeyValue<String, MonologValue> result4 = results.get(4);
 
-        Assert.assertEquals("alarm1", result1.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result1.value);
+        Assert.assertEquals("alarm1", result0.key);
+
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, new ArrayList<>(), false, false), result0.value);
+
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), true, false), result1.value);
+
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, new ArrayList<>(), false, true), result2.value);
 
         Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), true, false), result3.value);
+
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result4.value);
     }
 }
