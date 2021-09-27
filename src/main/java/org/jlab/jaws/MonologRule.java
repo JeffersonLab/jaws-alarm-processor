@@ -192,11 +192,22 @@ public class MonologRule extends AutoOverrideRule {
 
             System.err.println("active joiner: " + active + ", registered: " + registered);
 
+            MonologValue result;
+
             if(registered != null) {
-                registered.setActive(active);
+                result = MonologValue.newBuilder(registered).setActive(active).build();
+            } else {
+                result = MonologValue.newBuilder()
+                        .setRegistered(null)
+                        .setClass$(null)
+                        .setEffectiveRegistered(null)
+                        .setOverrides(new ArrayList<>())
+                        .setTransitionToActive(false)
+                        .setTransitionToNormal(false)
+                        .setActive(active).build();
             }
 
-            return MonologValue.newBuilder(registered).build();
+            return result;
         }
     }
 
