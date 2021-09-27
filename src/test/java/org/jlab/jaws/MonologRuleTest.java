@@ -91,7 +91,7 @@ public class MonologRuleTest {
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegistered.pipeInput("alarm1", registered2);
         List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(1, results.size());
+        Assert.assertEquals(2, results.size());
     }
 
     @Test
