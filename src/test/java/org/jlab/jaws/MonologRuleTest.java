@@ -134,6 +134,7 @@ public class MonologRuleTest {
 
         List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
 
+        System.err.println("\n\n\n");
         for(KeyValue<String, MonologValue> result: results) {
             System.err.println(result);
         }
