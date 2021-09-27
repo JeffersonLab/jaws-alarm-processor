@@ -101,12 +101,18 @@ public class MonologRuleTest {
         inputTopicRegistered.pipeInput("alarm1", registered1);
         inputTopicClasses.pipeInput("base", class1);
         List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(2, results.size());
 
-        KeyValue<String, MonologValue> result = results.get(1);
+        System.err.println("\n\n\n");
+        for(KeyValue<String, MonologValue> result: results) {
+            System.err.println(result);
+        }
 
-        Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result.value);
+        Assert.assertEquals(3, results.size());
+
+        KeyValue<String, MonologValue> result2 = results.get(2);
+
+        Assert.assertEquals("alarm1", result2.key);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result2.value);
     }
 
     @Test
@@ -139,9 +145,9 @@ public class MonologRuleTest {
             System.err.println(result);
         }
 
-        Assert.assertEquals(5, results.size());
+        Assert.assertEquals(6, results.size());
 
-        KeyValue<String, MonologValue> result = results.get(4);
+        KeyValue<String, MonologValue> result = results.get(5);
 
         Assert.assertEquals("alarm1", result.key);
         Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1)), false, false), result.value);

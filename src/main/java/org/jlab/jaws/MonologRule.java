@@ -16,6 +16,10 @@ import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.Temporal;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
@@ -91,7 +95,7 @@ public class MonologRule extends AutoOverrideRule {
                 .filter(new Predicate<String, MonologValue>() {
                     @Override
                     public boolean test(String key, MonologValue value) {
-                        System.err.println("\n\nFIRST JOIN: key: " + key + ", active: " + value.getActive());
+                        System.err.println("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
                         return true;
                     }
                 });
@@ -101,19 +105,25 @@ public class MonologRule extends AutoOverrideRule {
                 .filter(new Predicate<String, MonologValue>() {
                     @Override
                     public boolean test(String key, MonologValue value) {
-                        System.err.println("SECOND JOIN: key: " + key + ", active: " + value.getActive());
+                        System.err.println("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
                         return true;
                     }
                 });
 
         KTable<String, OverrideList> overriddenItems = getOverriddenViaGroupBy(builder);
 
-        KStream<String, MonologValue> plusOverrides = registeredAndActive.toStream()
-                .leftJoin(overriddenItems, new OverrideJoiner())
+        /*KStream<String, MonologValue> plusOverrides = registeredAndActive.toStream()
+                .outerJoin(overriddenItems.toStream(),
+                        new OverrideJoiner(),
+                        JoinWindows.of(Duration.of(1, ChronoUnit.SECONDS)),
+                        StreamJoined.with(Serdes.String(), MONOLOG_VALUE_SERDE, OVERRIDE_LIST_VALUE_SERDE))*/
+
+
+        KTable<String, MonologValue> plusOverrides = registeredAndActive.outerJoin(overriddenItems, new OverrideJoiner())
                 .filter(new Predicate<String, MonologValue>() {
                     @Override
                     public boolean test(String key, MonologValue value) {
-                        System.err.println("THIRD JOIN: key: " + key + ", active: " + value.getActive());
+                        System.err.println("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
                         return true;
                     }
                 });
@@ -126,7 +136,7 @@ public class MonologRule extends AutoOverrideRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, MonologValue> withTransitionState = plusOverrides
+        final KStream<String, MonologValue> withTransitionState = plusOverrides.toStream()
                 .transform(new MonologRule.MsgTransformerFactory(storeBuilder.name()),
                         Named.as("ActiveTransitionStateProcessor"),
                         storeBuilder.name());
@@ -170,7 +180,7 @@ public class MonologRule extends AutoOverrideRule {
 
         public MonologValue apply(RegisteredAlarm registered, RegisteredClass clazz) {
 
-            System.err.println("class joiner: " + registered);
+            //System.err.println("class joiner: " + registered);
 
             RegisteredAlarm effectiveRegistered = computeEffectiveRegistration(registered, clazz);
 
@@ -190,7 +200,7 @@ public class MonologRule extends AutoOverrideRule {
 
         public MonologValue apply(MonologValue registered, ActiveAlarm active) {
 
-            System.err.println("active joiner: " + active + ", registered: " + registered);
+            //System.err.println("active joiner: " + active + ", registered: " + registered);
 
             MonologValue result;
 
@@ -215,7 +225,7 @@ public class MonologRule extends AutoOverrideRule {
 
         public MonologValue apply(MonologValue registeredAndActive, OverrideList overrideList) {
 
-            System.err.println("override joiner: " + registeredAndActive);
+            //System.err.println("override joiner: " + registeredAndActive);
 
             if(overrideList == null) {
                 registeredAndActive.setOverrides(new ArrayList<>());
