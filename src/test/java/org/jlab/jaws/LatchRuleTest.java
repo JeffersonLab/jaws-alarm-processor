@@ -121,8 +121,8 @@ public class LatchRuleTest {
 
         System.err.println("\n");
 
-        //Assert.assertEquals(0, passthroughResults.size());
-        //Assert.assertEquals(1, overrideResults.size());
+        Assert.assertEquals(0, passthroughResults.size());
+        Assert.assertEquals(1, overrideResults.size());
 
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = overrideResults.get(0);
 
@@ -132,6 +132,7 @@ public class LatchRuleTest {
         MonologValue mono2 = MonologValue.newBuilder(mono1).build();
 
         mono2.getOverrides().add(new OverriddenAlarmValue(new LatchedAlarm()));
+        mono2.setTransitionToActive(false);
 
         inputTopicMonolog.pipeInput("alarm1", mono2);
 

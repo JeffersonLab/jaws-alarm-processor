@@ -69,8 +69,13 @@ public class LatchRule extends AutoOverrideRule {
 
         final KStream<String, MonologValue> monologStream = monologTable.toStream();
 
-        KStream<String, MonologValue> latchOverrideMonolog = monologStream.filter(
-                (key, value) -> value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitionToActive());
+        KStream<String, MonologValue> latchOverrideMonolog = monologStream.filter(new Predicate<String, MonologValue>() {
+            @Override
+            public boolean test(String key, MonologValue value) {
+                //System.err.println("Filtering: " + key + ", value: " + value);
+                return value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitionToActive();
+            }
+        });
 
         KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, MonologValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
             @Override
@@ -137,12 +142,10 @@ public class LatchRule extends AutoOverrideRule {
                 public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
                     KeyValue<String, MonologValue> result = new KeyValue<>(key, value);
 
-                    System.err.println("Processing key = " + key + ", value = " + value);
+                    //System.err.println("Processing key = " + key + ", value = " + value);
 
                     // Skip the filter unless latching is registered
                     if(value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching()) {
-
-                        System.err.println("Registered as latching!");
 
                         // Check if already latching in-progress
                         boolean latching = store.get(key) != null;
@@ -168,9 +171,9 @@ public class LatchRule extends AutoOverrideRule {
                             result = null; // filter out messages until latched!
                         }
 
-                        System.err.println("latched: " + latched);
-                        System.err.println("needToLatch: " + needToLatch);
-                        System.err.println("latching: " + latching);
+                        //System.err.println("latched: " + latched);
+                        //System.err.println("needToLatch: " + needToLatch);
+                        //System.err.println("latching: " + latching);
 
                         store.put(key, latching ? "y" : null);
                     }
