@@ -36,7 +36,7 @@ public class LatchRuleTest {
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
         final Topology top = rule.constructTopology(props);
 
-        System.err.println(top.describe());
+        //System.err.println(top.describe());
 
         testDriver = new TopologyTestDriver(top, props);
 
@@ -105,15 +105,50 @@ public class LatchRuleTest {
         mono1.getEffectiveRegistered().setLatching(true);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
+        //inputTopicMonolog.pipeInput("alarm2", mono1);
         List<KeyValue<String, MonologValue>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
-        Assert.assertEquals(0, passthroughResults.size());
-        Assert.assertEquals(1, overrideResults.size());
+        System.err.println("\n\nInitial Passthrough:");
+        for(KeyValue<String, MonologValue> pass: passthroughResults) {
+            System.err.println(pass);
+        }
+
+        System.err.println("\n\nInitial Overrides:");
+        for(KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> over: overrideResults) {
+            System.err.println(over);
+        }
+
+        System.err.println("\n");
+
+        //Assert.assertEquals(0, passthroughResults.size());
+        //Assert.assertEquals(1, overrideResults.size());
 
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = overrideResults.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertEquals(new OverriddenAlarmValue(new LatchedAlarm()), result.value);
+
+        MonologValue mono2 = MonologValue.newBuilder(mono1).build();
+
+        mono2.getOverrides().add(new OverriddenAlarmValue(new LatchedAlarm()));
+
+        inputTopicMonolog.pipeInput("alarm1", mono2);
+
+        passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        overrideResults = outputOverrideTopic.readKeyValuesToList();
+
+        System.err.println("\n\nFinal Passthrough:");
+        for(KeyValue<String, MonologValue> pass: passthroughResults) {
+            System.err.println(pass);
+        }
+
+        System.err.println("\n\nFinal Overrides:");
+        for(KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> over: overrideResults) {
+            System.err.println(over);
+        }
+
+        Assert.assertEquals(1, passthroughResults.size());
+        Assert.assertEquals(0, overrideResults.size());
     }
 }

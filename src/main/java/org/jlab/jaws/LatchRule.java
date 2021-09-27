@@ -7,10 +7,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.processor.ProcessorSupplier;
-import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
@@ -18,7 +15,6 @@ import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -71,12 +67,12 @@ public class LatchRule extends AutoOverrideRule {
         final KTable<String, MonologValue> monologTable = builder.table(INPUT_TOPIC,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        @SuppressWarnings("unchecked")
-        KStream<String, MonologValue>[] branches = monologTable.toStream().branch(
-                (key, value) -> value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitionToActive(),
-                (key, value) -> true);
+        final KStream<String, MonologValue> monologStream = monologTable.toStream();
 
-        KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = branches[0].map(new KeyValueMapper<String, MonologValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+        KStream<String, MonologValue> latchOverrideMonolog = monologStream.filter(
+                (key, value) -> value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitionToActive());
+
+        KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, MonologValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
             @Override
             public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, MonologValue value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
@@ -93,7 +89,7 @@ public class LatchRule extends AutoOverrideRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, MonologValue> passthrough = branches[1].transform(
+        final KStream<String, MonologValue> passthrough = monologStream.transform(
                 new MsgTransformerFactory(storeBuilder.name()),
                 Named.as("MyStatefulBranchProcessor"),
                 storeBuilder.name());
@@ -165,11 +161,6 @@ public class LatchRule extends AutoOverrideRule {
                         if (latched) {
                             latching = false;
                         } else if (needToLatch) {
-                            // Produce LatchedAlarm override message
-                            // We do this with branch()
-                            // Since I couldn't figure out how to forward then map to override
-                            //context.forward(key, value, To.child("latch-override-map"));
-
                             latching = true;
                         }
 
@@ -177,9 +168,9 @@ public class LatchRule extends AutoOverrideRule {
                             result = null; // filter out messages until latched!
                         }
 
-                        System.err.println("latching: " + latching);
                         System.err.println("latched: " + latched);
                         System.err.println("needToLatch: " + needToLatch);
+                        System.err.println("latching: " + latching);
 
                         store.put(key, latching ? "y" : null);
                     }
