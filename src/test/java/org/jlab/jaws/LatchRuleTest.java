@@ -19,12 +19,14 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class LatchRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, MonologValue> inputTopicMonolog;
-    private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputTopic;
+    private TestOutputTopic<String, MonologValue> outputPassthroughTopic;
+    private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputOverrideTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
     private RegisteredClass class1;
     private ActiveAlarm active1;
     private ActiveAlarm active2;
+    private MonologValue mono1;
 
     @Before
     public void setup() {
@@ -40,7 +42,8 @@ public class LatchRuleTest {
 
         // setup test topics
         inputTopicMonolog = testDriver.createInputTopic(LatchRule.INPUT_TOPIC, LatchRule.MONOLOG_KEY_SERDE.serializer(), LatchRule.MONOLOG_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC_PASSTHROUGH, LatchRule.OVERRIDE_KEY_SERDE.deserializer(), LatchRule.OVERRIDE_VALUE_SERDE.deserializer());
+        outputPassthroughTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC_PASSTHROUGH, LatchRule.MONOLOG_KEY_SERDE.deserializer(), LatchRule.MONOLOG_VALUE_SERDE.deserializer());
+        outputOverrideTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC_OVERRIDE, LatchRule.OVERRIDE_KEY_SERDE.deserializer(), LatchRule.OVERRIDE_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
         registered2 = new RegisteredAlarm();
@@ -61,12 +64,23 @@ public class LatchRuleTest {
         class1.setLocation(AlarmLocation.A4);
         class1.setPriority(AlarmPriority.P3_MINOR);
         class1.setScreenpath("/tmp");
+        class1.setPointofcontactusername("tester");
+        class1.setRationale("because");
 
         active1 = new ActiveAlarm();
         active2 = new ActiveAlarm();
 
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
+
+        mono1 = new MonologValue();
+        mono1.setActive(active1);
+        mono1.setClass$(class1);
+        mono1.setRegistered(registered1);
+        mono1.setEffectiveRegistered(MonologRule.computeEffectiveRegistration(registered1, class1));
+        mono1.setOverrides(new ArrayList<>());
+        mono1.setTransitionToActive(true);
+        mono1.setTransitionToNormal(false);
     }
 
     @After
@@ -74,20 +88,30 @@ public class LatchRuleTest {
         testDriver.close();
     }
 
-    //@Test
+    @Test
     public void notLatching() {
-        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered2, class1, null, active1, new ArrayList<>(), false, false));
-        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(0, results.size());
+        mono1.getEffectiveRegistered().setLatching(false);
+
+        inputTopicMonolog.pipeInput("alarm1", mono1);
+        List<KeyValue<String, MonologValue>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+
+        Assert.assertEquals(1, passthroughResults.size());
+        Assert.assertEquals(0, overrideResults.size());
     }
 
-    //@Test
+    @Test
     public void latching() {
-        inputTopicMonolog.pipeInput("alarm1", new MonologValue(registered1, class1, null, active1, new ArrayList<>(), false, false));
-        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> results = outputTopic.readKeyValuesToList();
-        Assert.assertEquals(1, results.size());
+        mono1.getEffectiveRegistered().setLatching(true);
 
-        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = results.get(0);
+        inputTopicMonolog.pipeInput("alarm1", mono1);
+        List<KeyValue<String, MonologValue>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+
+        Assert.assertEquals(0, passthroughResults.size());
+        Assert.assertEquals(1, overrideResults.size());
+
+        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = overrideResults.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertEquals(new OverriddenAlarmValue(new LatchedAlarm()), result.value);

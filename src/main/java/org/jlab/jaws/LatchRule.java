@@ -7,7 +7,9 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.ProcessorSupplier;
 import org.apache.kafka.streams.processor.To;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
@@ -38,11 +40,11 @@ public class LatchRule extends AutoOverrideRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final Serdes.StringSerde ACTIVE_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<ActiveAlarm> ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
-
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+
+    public static final Serdes.StringSerde LATCH_STORE_KEY_SERDE = new Serdes.StringSerde();
+    public static final Serdes.StringSerde LATCH_STORE_VALUE_SERDE = new Serdes.StringSerde();
 
     @Override
     public Properties constructProperties() {
@@ -69,28 +71,37 @@ public class LatchRule extends AutoOverrideRule {
         final KTable<String, MonologValue> monologTable = builder.table(INPUT_TOPIC,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
+        @SuppressWarnings("unchecked")
+        KStream<String, MonologValue>[] branches = monologTable.toStream().branch(
+                (key, value) -> value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitionToActive(),
+                (key, value) -> true);
 
-        final StoreBuilder<KeyValueStore<String, ActiveAlarm>> storeBuilder = Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore("PreviousActiveStateStore"),
-                ACTIVE_KEY_SERDE,
-                ACTIVE_VALUE_SERDE
+        KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = branches[0].map(new KeyValueMapper<String, MonologValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+            @Override
+            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, MonologValue value) {
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
+            }
+        });
+
+        latchOverrides.to(OUTPUT_TOPIC_OVERRIDE, Produced.as("Latch-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
+
+        final StoreBuilder<KeyValueStore<String, String>> storeBuilder = Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore("LatchStateStore"),
+                LATCH_STORE_KEY_SERDE,
+                LATCH_STORE_VALUE_SERDE
         ).withCachingEnabled();
 
         builder.addStateStore(storeBuilder);
 
-        // TODO: set headers inside transform
-        final KStream<String, MonologValue> output = monologTable.toStream().transform(
+        final KStream<String, MonologValue> passthrough = branches[1].transform(
                 new MsgTransformerFactory(storeBuilder.name()),
                 Named.as("MyStatefulBranchProcessor"),
                 storeBuilder.name());
 
-        output.to(OUTPUT_TOPIC_PASSTHROUGH, Produced.as("Latch-Passthrough")
+        passthrough.to(OUTPUT_TOPIC_PASSTHROUGH, Produced.as("Latch-Passthrough")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         Topology top = builder.build();
-
-        top.addSink("latch-override", OUTPUT_TOPIC_OVERRIDE, OVERRIDE_KEY_SERDE.serializer(),
-                OVERRIDE_VALUE_SERDE.serializer(), "MyStatefulBranchProcessor");
 
         return top;
     }
@@ -116,79 +127,62 @@ public class LatchRule extends AutoOverrideRule {
         @Override
         public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
             return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
-                private KeyValueStore<String, MonologProcessingValue> store;
+                private KeyValueStore<String, String> store;
                 private ProcessorContext context;
 
                 @Override
                 @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
                 public void init(ProcessorContext context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, MonologProcessingValue>) context.getStateStore(storeName);
+                    this.store = (KeyValueStore<String, String>) context.getStateStore(storeName);
                 }
 
                 @Override
                 public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
                     KeyValue<String, MonologValue> result = new KeyValue<>(key, value);
 
-                    // Only process non-tombstone msg where latching is registered
-                    if(value != null && value.getRegistered().getLatching() != null && value.getRegistered().getLatching()) {
+                    System.err.println("Processing key = " + key + ", value = " + value);
 
-                        String latchState = "INIT";
+                    // Skip the filter unless latching is registered
+                    if(value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching()) {
 
-                        MonologProcessingValue previous = store.get(key);
+                        System.err.println("Registered as latching!");
 
-                        if(previous == null) {
-                            previous = new MonologProcessingValue(null, null, new ArrayList<>(), latchState);
-                        } else {
-                            latchState = previous.getLatchState();
-                        }
+                        // Check if already latching in-progress
+                        boolean latching = store.get(key) != null;
 
-                        // TODO: check if change from active to not-active occurred, then update latchState?
-                        boolean unactivated = false;
-                        boolean currentlyLatched = false;
-
-                        for(OverriddenAlarmValue over: value.getOverrides()) { // Check if currently Latched
-                            if(over.getMsg() instanceof LatchedAlarm) {
-                                currentlyLatched = true;
-                                break;
+                        // Check if latched
+                        boolean latched = false;
+                        for (OverriddenAlarmValue override : value.getOverrides()) {
+                            if (override.getMsg() instanceof LatchedAlarm) {
+                                latched = true;
                             }
                         }
 
-                        if(previous.getActive() != null && value.getActive() == null) {
-                            unactivated = true;
+                        // Check if we need to latch
+                        boolean needToLatch = value.getTransitionToActive();
+
+                        if (latched) {
+                            latching = false;
+                        } else if (needToLatch) {
+                            // Produce LatchedAlarm override message
+                            // We do this with branch()
+                            // Since I couldn't figure out how to forward then map to override
+                            //context.forward(key, value, To.child("latch-override-map"));
+
+                            latching = true;
                         }
 
-                        if(previous.getLatchState().equals("LATCHED") && !currentlyLatched) { // Check if Acknowledged
-                            if(unactivated) {
-                                latchState = "INIT";
-                            } else {
-                                latchState = "ACKED_BUT_NEED_INACTIVATE";
-                            }
-                        } else if(currentlyLatched) {
-                            latchState = "LATCHED";
+                        if (latching) {
+                            result = null; // filter out messages until latched!
                         }
 
-                        if (!latchState.equals("LATCHED") && !latchState.equals("LATCHING") && // We're not LATCHED or LATCHING
-                                (previous.getActive() == null) &&
-                                value.getActive() != null) {  // And a change to active occurred
-                                    latchState = "LATCHING";
+                        System.err.println("latching: " + latching);
+                        System.err.println("latched: " + latched);
+                        System.err.println("needToLatch: " + needToLatch);
 
-                                    // Add Latch Record
-                                    // TODO: This prob must be MonoValue format then map to overridden format outside
-                                    //context.forward(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()), To.child("latch-override"));
-                        }
-
-                        if(latchState.equals("LATCHING")) {
-                            result = null; // Don't pass any more records through until latch override set!
-                        }
-
-                        // For next time
-                        System.err.println(store + ", " + key + ", " + value);
-                        store.put(key, new MonologProcessingValue(value.getRegistered(), value.getActive(), value.getOverrides(), latchState));
-
+                        store.put(key, latching ? "y" : null);
                     }
-
-                    log.trace("Transformed: {}={} -> {}", key, value, result);
 
                     return result;
                 }
