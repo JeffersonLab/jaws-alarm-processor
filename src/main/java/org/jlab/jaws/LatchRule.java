@@ -140,8 +140,6 @@ public class LatchRule extends AutoOverrideRule {
 
                 @Override
                 public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
-                    KeyValue<String, MonologValue> result = new KeyValue<>(key, value);
-
                     //System.err.println("Processing key = " + key + ", value = " + value);
 
                     // Skip the filter unless latching is registered
@@ -162,8 +160,8 @@ public class LatchRule extends AutoOverrideRule {
                             latching = true;
                         }
 
-                        if (latching) {
-                            result = null; // filter out messages until latched!
+                        if (latching) { // Update transition state
+                            value.getTransitions().setLatching(true);
                         }
 
                         //System.err.println("latched: " + latched);
@@ -173,7 +171,7 @@ public class LatchRule extends AutoOverrideRule {
                         store.put(key, latching ? "y" : null);
                     }
 
-                    return result;
+                    return new KeyValue<>(key, value);
                 }
 
                 @Override

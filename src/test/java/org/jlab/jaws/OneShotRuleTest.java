@@ -116,7 +116,11 @@ public class OneShotRuleTest {
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, overrideResults.size());
-        Assert.assertEquals(0, passthroughResults.size());
+        Assert.assertEquals(1, passthroughResults.size());
+
+        KeyValue<String, MonologValue> passResult = passthroughResults.get(0);
+
+        Assert.assertEquals(true, passResult.value.getTransitions().getUnshelving());
     }
 
     @Test

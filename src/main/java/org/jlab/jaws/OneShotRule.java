@@ -140,8 +140,6 @@ public class OneShotRule extends AutoOverrideRule {
 
                 @Override
                 public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
-                    KeyValue<String, MonologValue> result = new KeyValue<>(key, value);
-
                     System.err.println("Processing key = " + key + ", value = " + value);
 
                     boolean unshelving = false;
@@ -162,11 +160,11 @@ public class OneShotRule extends AutoOverrideRule {
 
                     store.put(key, unshelving ? "y" : null);
 
-                    if (unshelving) {
-                        result = null; // filter out messages until unshelved!
+                    if (unshelving) { // Update transition state
+                        value.getTransitions().setUnshelving(true);
                     }
 
-                    return result;
+                    return new KeyValue<>(key, value);
                 }
 
                 @Override

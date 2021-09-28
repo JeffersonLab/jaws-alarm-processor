@@ -122,8 +122,12 @@ public class LatchRuleTest {
 
         System.err.println("\n");
 
-        Assert.assertEquals(0, passthroughResults.size());
+        Assert.assertEquals(1, passthroughResults.size());
         Assert.assertEquals(1, overrideResults.size());
+
+        KeyValue<String, MonologValue> passResult = passthroughResults.get(0);
+
+        Assert.assertEquals(true, passResult.value.getTransitions().getLatching());
 
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = overrideResults.get(0);
 

@@ -15,6 +15,18 @@
       "type": "boolean",
       "default": false,
       "doc": "true when record is first one to indicate Normal after being Active"
+    },
+    {
+      "name": "latching",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is in-process of latching, LatchAlarm record forthcoming"
+    },
+    {
+      "name": "unshelving",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is in-process of being unshelved after one-shot, ShelvedAlarm record clearing"
     }
   ]
 }
