@@ -1,0 +1,20 @@
+{
+  "type": "record",
+  "name": "TransitionSet",
+  "namespace": "org.jlab.jaws.entity",
+  "doc": "Set of alarm transitions",
+  "fields": [
+    {
+      "name": "transitionToActive",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is first one to indicate Active after being Normal"
+    },
+    {
+      "name": "transitionToNormal",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is first one to indicate Normal after being Active"
+    }
+  ]
+}

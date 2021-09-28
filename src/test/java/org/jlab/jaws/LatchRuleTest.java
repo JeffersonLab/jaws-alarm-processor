@@ -79,8 +79,9 @@ public class LatchRuleTest {
         mono1.setRegistered(registered1);
         mono1.setEffectiveRegistered(MonologRule.computeEffectiveRegistration(registered1, class1));
         mono1.setOverrides(new OverrideSet());
-        mono1.setTransitionToActive(true);
-        mono1.setTransitionToNormal(false);
+        mono1.setTransitions(new TransitionSet());
+        mono1.getTransitions().setTransitionToActive(true);
+        mono1.getTransitions().setTransitionToNormal(false);
     }
 
     @After
@@ -132,7 +133,7 @@ public class LatchRuleTest {
         MonologValue mono2 = MonologValue.newBuilder(mono1).build();
 
         mono2.getOverrides().setLatched(new LatchedAlarm());
-        mono2.setTransitionToActive(false);
+        mono2.getTransitions().setTransitionToActive(false);
 
         inputTopicMonolog.pipeInput("alarm1", mono2);
 

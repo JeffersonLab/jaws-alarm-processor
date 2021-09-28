@@ -73,7 +73,7 @@ public class OneShotRule extends AutoOverrideRule {
             @Override
             public boolean test(String key, MonologValue value) {
                 System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot() && value.getTransitionToNormal();
+                return value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
             }
         });
 
@@ -153,7 +153,7 @@ public class OneShotRule extends AutoOverrideRule {
                         unshelving = store.get(key) != null;
 
                         // Check if we need to unshelve
-                        boolean needToUnshelve = value.getTransitionToNormal();
+                        boolean needToUnshelve = value.getTransitions().getTransitionToNormal();
 
                         if (needToUnshelve) {
                             unshelving = true;

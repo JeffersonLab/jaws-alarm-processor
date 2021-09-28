@@ -73,7 +73,7 @@ public class LatchRule extends AutoOverrideRule {
             @Override
             public boolean test(String key, MonologValue value) {
                 //System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitionToActive();
+                return value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitions().getTransitionToActive();
             }
         });
 
@@ -154,7 +154,7 @@ public class LatchRule extends AutoOverrideRule {
                         boolean latched = value.getOverrides().getLatched() != null;
 
                         // Check if we need to latch
-                        boolean needToLatch = value.getTransitionToActive();
+                        boolean needToLatch = value.getTransitions().getTransitionToActive();
 
                         if (latched) {
                             latching = false;

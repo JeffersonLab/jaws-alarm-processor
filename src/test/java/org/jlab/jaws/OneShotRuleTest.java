@@ -72,8 +72,9 @@ public class OneShotRuleTest {
         mono1.setRegistered(registered1);
         mono1.setEffectiveRegistered(MonologRule.computeEffectiveRegistration(registered1, class1));
         mono1.setOverrides(new OverrideSet());
-        mono1.setTransitionToActive(true);
-        mono1.setTransitionToNormal(false);
+        mono1.setTransitions(new TransitionSet());
+        mono1.getTransitions().setTransitionToActive(true);
+        mono1.getTransitions().setTransitionToNormal(false);
     }
 
     @After
@@ -106,8 +107,8 @@ public class OneShotRuleTest {
         shelved.setReason(ShelvedAlarmReason.Other);
         mono1.getOverrides().setShelved(shelved);
 
-        mono1.setTransitionToActive(false);
-        mono1.setTransitionToNormal(true);
+        mono1.getTransitions().setTransitionToActive(false);
+        mono1.getTransitions().setTransitionToNormal(true);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);

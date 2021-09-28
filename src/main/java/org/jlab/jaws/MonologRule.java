@@ -190,8 +190,7 @@ public class MonologRule extends AutoOverrideRule {
                     .setEffectiveRegistered(effectiveRegistered)
                     .setActive(null)
                     .setOverrides(new OverrideSet())
-                    .setTransitionToActive(false)
-                    .setTransitionToNormal(false)
+                    .setTransitions(new TransitionSet())
                     .build();
         }
     }
@@ -212,8 +211,7 @@ public class MonologRule extends AutoOverrideRule {
                         .setClass$(null)
                         .setEffectiveRegistered(null)
                         .setOverrides(new OverrideSet())
-                        .setTransitionToActive(false)
-                        .setTransitionToNormal(false)
+                        .setTransitions(new TransitionSet())
                         .setActive(active).build();
             }
 
@@ -350,8 +348,8 @@ public class MonologRule extends AutoOverrideRule {
                     store.put(key, next);
 
                     if(value != null) {
-                        value.setTransitionToActive(transitionToActive);
-                        value.setTransitionToNormal(transitionToNormal);
+                        value.getTransitions().setTransitionToActive(transitionToActive);
+                        value.getTransitions().setTransitionToNormal(transitionToNormal);
                     }
 
                     log.trace("Transformed: {}={}", key, value);
