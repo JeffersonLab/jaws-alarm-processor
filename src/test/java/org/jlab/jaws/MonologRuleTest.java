@@ -112,7 +112,7 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result2 = results.get(2);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result2.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new OverrideSet(), false, false), result2.value);
     }
 
     @Test
@@ -149,8 +149,11 @@ public class MonologRuleTest {
 
         KeyValue<String, MonologValue> result = results.get(5);
 
+        OverrideSet overrides = OverrideSet.newBuilder()
+                .build();
+
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<OverriddenAlarmValue>(Arrays.asList(overriddenAlarmValue1)), false, false), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, false, false), result.value);
     }
 
     @Test
@@ -187,14 +190,17 @@ public class MonologRuleTest {
 
         Assert.assertEquals("alarm1", result0.key);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, new ArrayList<>(), false, false), result0.value);
+        OverrideSet overrides = OverrideSet.newBuilder()
+                .build();
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), true, false), result1.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, false, false), result0.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, new ArrayList<>(), false, true), result2.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, true, false), result1.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), true, false), result3.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, false, true), result2.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new ArrayList<>(), false, false), result4.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, true, false), result3.value);
+
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, false, false), result4.value);
     }
 }

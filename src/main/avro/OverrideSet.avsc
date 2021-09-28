@@ -1,0 +1,50 @@
+{
+  "type": "record",
+  "name": "OverrideSet",
+  "namespace": "org.jlab.jaws.entity",
+  "doc": "Set of overrides for an alarm",
+  "fields": [
+    {
+      "type": ["null", "DisabledAlarm"],
+      "default": null,
+      "name": "disabled",
+      "doc": "A disable override"
+    },
+    {
+      "type": ["null", "FilteredAlarm"],
+      "default": null,
+      "name": "filtered",
+      "doc": "A filtered override"
+    },
+    {
+      "type": ["null", "LatchedAlarm"],
+      "default": null,
+      "name": "latched",
+      "doc": "A latched override"
+    },
+    {
+      "type": ["null", "MaskedAlarm"],
+      "default": null,
+      "name": "masked",
+      "doc": "A masked override"
+    },
+    {
+      "type": ["null", "OnDelayedAlarm"],
+      "default": null,
+      "name": "ondelay",
+      "doc": "An on-delayed override"
+    },
+    {
+      "type": ["null", "OffDelayedAlarm"],
+      "default": null,
+      "name": "offdelay",
+      "doc": "An off-delayed override"
+    },
+    {
+      "type": ["null", "ShelvedAlarm"],
+      "default": null,
+      "name": "shelved",
+      "doc": "A temporarily suppressed override"
+    }
+  ]
+}

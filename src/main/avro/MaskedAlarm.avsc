@@ -1,0 +1,7 @@
+{
+  "type": "record",
+  "name": "MaskedAlarm",
+  "namespace": "org.jlab.jaws.entity",
+  "doc": "A masked alarm message value",
+  "fields": []
+}

@@ -1,0 +1,13 @@
+{
+  "type": "record",
+  "name": "FilteredAlarm",
+  "namespace": "org.jlab.jaws.entity",
+  "doc": "A filtered alarm message value",
+  "fields": [
+    {
+      "name": "filtername",
+      "type": "string",
+      "doc": "The name of the filter suppressing this alarm"
+    }
+  ]
+}

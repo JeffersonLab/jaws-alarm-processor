@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "DisabledAlarm",
+  "namespace": "org.jlab.jaws.entity",
+  "doc": "A disabled alarm message value",
+  "fields": [
+    {
+      "name": "comments",
+      "type": [
+        "null",
+        "string"
+      ],
+      "doc": "Operator explanation"
+    }
+  ]
+}

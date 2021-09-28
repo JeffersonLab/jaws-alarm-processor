@@ -189,7 +189,7 @@ public class MonologRule extends AutoOverrideRule {
                     .setClass$(clazz)
                     .setEffectiveRegistered(effectiveRegistered)
                     .setActive(null)
-                    .setOverrides(new ArrayList<>())
+                    .setOverrides(new OverrideSet())
                     .setTransitionToActive(false)
                     .setTransitionToNormal(false)
                     .build();
@@ -211,7 +211,7 @@ public class MonologRule extends AutoOverrideRule {
                         .setRegistered(null)
                         .setClass$(null)
                         .setEffectiveRegistered(null)
-                        .setOverrides(new ArrayList<>())
+                        .setOverrides(new OverrideSet())
                         .setTransitionToActive(false)
                         .setTransitionToNormal(false)
                         .setActive(active).build();
@@ -227,11 +227,29 @@ public class MonologRule extends AutoOverrideRule {
 
             //System.err.println("override joiner: " + registeredAndActive);
 
-            if(overrideList == null) {
-                registeredAndActive.setOverrides(new ArrayList<>());
-            } else {
-                registeredAndActive.setOverrides(overrideList.getOverrides());
+            OverrideSet overrides = OverrideSet.newBuilder()
+                    .setDisabled(null)
+                    .setFiltered(null)
+                    .setLatched(null)
+                    .setMasked(null)
+                    .setOffdelay(null)
+                    .setOndelay(null)
+                    .setShelved(null)
+                    .build();
+
+            if(overrideList != null) {
+                for(OverriddenAlarmValue over: overrideList.getOverrides()) {
+                    if(over.getMsg() instanceof DisabledAlarm) {
+                        overrides.setDisabled((DisabledAlarm) over.getMsg());
+                    }
+
+                    if(over.getMsg() instanceof FilteredAlarm) {
+                        overrides.setFiltered((FilteredAlarm) over.getMsg());
+                    }
+                }
             }
+
+            registeredAndActive.setOverrides(overrides);
 
             return MonologValue.newBuilder(registeredAndActive).build();
         }

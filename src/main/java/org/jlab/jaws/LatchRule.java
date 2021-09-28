@@ -96,7 +96,7 @@ public class LatchRule extends AutoOverrideRule {
 
         final KStream<String, MonologValue> passthrough = monologStream.transform(
                 new MsgTransformerFactory(storeBuilder.name()),
-                Named.as("MyStatefulBranchProcessor"),
+                Named.as("LatchTransitionProcessor"),
                 storeBuilder.name());
 
         passthrough.to(OUTPUT_TOPIC_PASSTHROUGH, Produced.as("Latch-Passthrough")
@@ -151,12 +151,7 @@ public class LatchRule extends AutoOverrideRule {
                         boolean latching = store.get(key) != null;
 
                         // Check if latched
-                        boolean latched = false;
-                        for (OverriddenAlarmValue override : value.getOverrides()) {
-                            if (override.getMsg() instanceof LatchedAlarm) {
-                                latched = true;
-                            }
-                        }
+                        boolean latched = value.getOverrides().getLatched() != null;
 
                         // Check if we need to latch
                         boolean needToLatch = value.getTransitionToActive();
