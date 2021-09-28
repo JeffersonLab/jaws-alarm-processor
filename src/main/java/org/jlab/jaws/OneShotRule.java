@@ -28,7 +28,7 @@ public class OneShotRule extends AutoOverrideRule {
 
     private static final Logger log = LoggerFactory.getLogger(OneShotRule.class);
 
-    public static final String OUTPUT_TOPIC_PASSTHROUGH = "latch-processed-monolog";
+    public static final String OUTPUT_TOPIC_PASSTHROUGH = "oneshot-processed-monolog";
     public static final String OUTPUT_TOPIC_OVERRIDE = "overridden-alarms";
 
     public static final String INPUT_TOPIC = "monolog";
