@@ -1,8 +1,8 @@
 {
   "type": "record",
-  "name": "DisabledAlarm",
+  "name": "DisabledOverride",
   "namespace": "org.jlab.jaws.entity",
-  "doc": "A disabled alarm message value",
+  "doc": "A disabled override",
   "fields": [
     {
       "name": "comments",

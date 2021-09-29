@@ -5,10 +5,10 @@
   "doc": "Set of overrides for an alarm",
   "fields": [
     {
-      "type": ["null", "DisabledAlarm"],
+      "type": ["null", "DisabledOverride"],
       "default": null,
       "name": "disabled",
-      "doc": "A disable override"
+      "doc": "A disabled override"
     },
     {
       "type": ["null", "FilteredAlarm"],

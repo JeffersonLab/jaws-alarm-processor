@@ -241,7 +241,7 @@ public class MonologRule extends ProcessingRule {
             if(overrideList != null) {
                 for(OverriddenAlarmValue over: overrideList.getOverrides()) {
                     if(over.getMsg() instanceof DisabledAlarm) {
-                        overrides.setDisabled((DisabledAlarm) over.getMsg());
+                        overrides.setDisabled((DisabledOverride) over.getMsg());
                     }
 
                     if(over.getMsg() instanceof FilteredAlarm) {

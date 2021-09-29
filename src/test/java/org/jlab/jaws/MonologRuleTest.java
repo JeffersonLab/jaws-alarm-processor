@@ -129,9 +129,9 @@ public class MonologRuleTest {
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), overriddenAlarmValue1);
 
         OverriddenAlarmValue overriddenAlarmValue2 = new OverriddenAlarmValue();
-        DisabledAlarm disabledAlarm = new DisabledAlarm();
-        disabledAlarm.setComments("Testing");
-        overriddenAlarmValue2.setMsg(disabledAlarm);
+        DisabledOverride disabledOverride = new DisabledOverride();
+        disabledOverride.setComments("Testing");
+        overriddenAlarmValue2.setMsg(disabledOverride);
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), overriddenAlarmValue2);
 
 

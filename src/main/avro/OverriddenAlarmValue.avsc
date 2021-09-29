@@ -7,18 +7,7 @@
     {
       "name": "msg",
       "type": [
-        {
-          "type": "record",
-          "name": "DisabledAlarm",
-          "doc": "A disabled alarm message value",
-          "fields": [
-            {
-              "name": "comments",
-              "type": ["null", "string"],
-              "doc": "Operator explanation"
-            }
-          ]
-        },
+        "DisabledOverride",
         {
           "type": "record",
           "name": "FilteredAlarm",
