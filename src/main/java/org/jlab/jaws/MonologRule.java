@@ -190,7 +190,7 @@ public class MonologRule extends ProcessingRule {
                     .setClass$(clazz)
                     .setEffectiveRegistration(effectiveRegistered)
                     .setActivation(null)
-                    .setOverrides(new OverrideSet())
+                    .setOverrides(new AlarmOverrides())
                     .setTransitions(new TransitionSet())
                     .setState(AlarmState.Normal)
                     .build();
@@ -212,7 +212,7 @@ public class MonologRule extends ProcessingRule {
                         .setRegistration(null)
                         .setClass$(null)
                         .setEffectiveRegistration(null)
-                        .setOverrides(new OverrideSet())
+                        .setOverrides(new AlarmOverrides())
                         .setTransitions(new TransitionSet())
                         .setState(AlarmState.Normal)
                         .setActivation(active).build();
@@ -228,7 +228,7 @@ public class MonologRule extends ProcessingRule {
 
             //System.err.println("override joiner: " + registeredAndActive);
 
-            OverrideSet overrides = OverrideSet.newBuilder()
+            AlarmOverrides overrides = AlarmOverrides.newBuilder()
                     .setDisabled(null)
                     .setFiltered(null)
                     .setLatched(null)

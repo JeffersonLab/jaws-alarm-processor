@@ -78,7 +78,7 @@ public class LatchRuleTest {
         mono1.setClass$(class1);
         mono1.setRegistration(registered1);
         mono1.setEffectiveRegistration(MonologRule.computeEffectiveRegistration(registered1, class1));
-        mono1.setOverrides(new OverrideSet());
+        mono1.setOverrides(new AlarmOverrides());
         mono1.setTransitions(new TransitionSet());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);

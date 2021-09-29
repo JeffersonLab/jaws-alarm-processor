@@ -37,7 +37,7 @@
     },
     {
       "name": "overrides",
-      "type": "OverrideSet",
+      "type": "AlarmOverrides",
       "doc": "The alarm overrides"
     },
     {

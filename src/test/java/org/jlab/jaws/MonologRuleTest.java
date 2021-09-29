@@ -112,7 +112,7 @@ public class MonologRuleTest {
         KeyValue<String, Alarm> result2 = results.get(2);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new OverrideSet(), new TransitionSet(), AlarmState.Normal), result2.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrides(), new TransitionSet(), AlarmState.Normal), result2.value);
     }
 
     @Test
@@ -149,7 +149,7 @@ public class MonologRuleTest {
 
         KeyValue<String, Alarm> result = results.get(5);
 
-        OverrideSet overrides = OverrideSet.newBuilder()
+        AlarmOverrides overrides = AlarmOverrides.newBuilder()
                 .build();
 
         Assert.assertEquals("alarm1", result.key);
@@ -190,7 +190,7 @@ public class MonologRuleTest {
 
         Assert.assertEquals("alarm1", result0.key);
 
-        OverrideSet overrides = OverrideSet.newBuilder()
+        AlarmOverrides overrides = AlarmOverrides.newBuilder()
                 .build();
 
         TransitionSet transitions = TransitionSet.newBuilder().build();

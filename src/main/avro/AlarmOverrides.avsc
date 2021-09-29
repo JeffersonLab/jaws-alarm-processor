@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "OverrideSet",
+  "name": "AlarmOverrides",
   "namespace": "org.jlab.jaws.entity",
   "doc": "Set of overrides for an alarm",
   "fields": [
