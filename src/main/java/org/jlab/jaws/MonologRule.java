@@ -45,7 +45,7 @@ public class MonologRule extends ProcessingRule {
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
@@ -91,21 +91,21 @@ public class MonologRule extends ProcessingRule {
         final KTable<String, ActiveAlarm> activeTable = builder.table(inputTopicActive,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
-        KTable<String, MonologValue> classesAndRegistered = registeredTable.leftJoin(classesTable,
+        KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
                 RegisteredAlarm::getClass$, new RegisteredClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
-                .filter(new Predicate<String, MonologValue>() {
+                .filter(new Predicate<String, Alarm>() {
                     @Override
-                    public boolean test(String key, MonologValue value) {
+                    public boolean test(String key, Alarm value) {
                         System.err.println("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
                         return true;
                     }
                 });
 
-        KTable<String, MonologValue> registeredAndActive = classesAndRegistered.outerJoin(activeTable,
+        KTable<String, Alarm> registeredAndActive = classesAndRegistered.outerJoin(activeTable,
                 new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
-                .filter(new Predicate<String, MonologValue>() {
+                .filter(new Predicate<String, Alarm>() {
                     @Override
-                    public boolean test(String key, MonologValue value) {
+                    public boolean test(String key, Alarm value) {
                         System.err.println("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
                         return true;
                     }
@@ -113,17 +113,17 @@ public class MonologRule extends ProcessingRule {
 
         KTable<String, OverrideList> overriddenItems = getOverriddenViaGroupBy(builder);
 
-        /*KStream<String, MonologValue> plusOverrides = registeredAndActive.toStream()
+        /*KStream<String, Alarm> plusOverrides = registeredAndActive.toStream()
                 .outerJoin(overriddenItems.toStream(),
                         new OverrideJoiner(),
                         JoinWindows.of(Duration.of(1, ChronoUnit.SECONDS)),
                         StreamJoined.with(Serdes.String(), MONOLOG_VALUE_SERDE, OVERRIDE_LIST_VALUE_SERDE))*/
 
 
-        KTable<String, MonologValue> plusOverrides = registeredAndActive.outerJoin(overriddenItems, new OverrideJoiner())
-                .filter(new Predicate<String, MonologValue>() {
+        KTable<String, Alarm> plusOverrides = registeredAndActive.outerJoin(overriddenItems, new OverrideJoiner())
+                .filter(new Predicate<String, Alarm>() {
                     @Override
-                    public boolean test(String key, MonologValue value) {
+                    public boolean test(String key, Alarm value) {
                         System.err.println("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
                         return true;
                     }
@@ -137,12 +137,12 @@ public class MonologRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, MonologValue> withTransitionState = plusOverrides.toStream()
+        final KStream<String, Alarm> withTransitionState = plusOverrides.toStream()
                 .transform(new MonologRule.MsgTransformerFactory(storeBuilder.name()),
                         Named.as("ActiveTransitionStateProcessor"),
                         storeBuilder.name());
 
-        final KStream<String, MonologValue> withHeaders = withTransitionState
+        final KStream<String, Alarm> withHeaders = withTransitionState
                 .transform(new MonologAddHeadersFactory());
 
         withHeaders.to(outputTopic, Produced.as("Monolog")
@@ -177,15 +177,15 @@ public class MonologRule extends ProcessingRule {
         return effectiveRegistered;
     }
 
-    private final class RegisteredClassJoiner implements ValueJoiner<RegisteredAlarm, RegisteredClass, MonologValue> {
+    private final class RegisteredClassJoiner implements ValueJoiner<RegisteredAlarm, RegisteredClass, Alarm> {
 
-        public MonologValue apply(RegisteredAlarm registered, RegisteredClass clazz) {
+        public Alarm apply(RegisteredAlarm registered, RegisteredClass clazz) {
 
             //System.err.println("class joiner: " + registered);
 
             RegisteredAlarm effectiveRegistered = computeEffectiveRegistration(registered, clazz);
 
-            return MonologValue.newBuilder()
+            return Alarm.newBuilder()
                     .setRegistered(registered)
                     .setClass$(clazz)
                     .setEffectiveRegistered(effectiveRegistered)
@@ -197,18 +197,18 @@ public class MonologRule extends ProcessingRule {
         }
     }
 
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<MonologValue, ActiveAlarm, MonologValue> {
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, ActiveAlarm, Alarm> {
 
-        public MonologValue apply(MonologValue registered, ActiveAlarm active) {
+        public Alarm apply(Alarm registered, ActiveAlarm active) {
 
             //System.err.println("active joiner: " + active + ", registered: " + registered);
 
-            MonologValue result;
+            Alarm result;
 
             if(registered != null) {
-                result = MonologValue.newBuilder(registered).setActive(active).build();
+                result = Alarm.newBuilder(registered).setActive(active).build();
             } else {
-                result = MonologValue.newBuilder()
+                result = Alarm.newBuilder()
                         .setRegistered(null)
                         .setClass$(null)
                         .setEffectiveRegistered(null)
@@ -222,9 +222,9 @@ public class MonologRule extends ProcessingRule {
         }
     }
 
-    private final class OverrideJoiner implements ValueJoiner<MonologValue, OverrideList, MonologValue> {
+    private final class OverrideJoiner implements ValueJoiner<Alarm, OverrideList, Alarm> {
 
-        public MonologValue apply(MonologValue registeredAndActive, OverrideList overrideList) {
+        public Alarm apply(Alarm registeredAndActive, OverrideList overrideList) {
 
             //System.err.println("override joiner: " + registeredAndActive);
 
@@ -252,7 +252,7 @@ public class MonologRule extends ProcessingRule {
 
             registeredAndActive.setOverrides(overrides);
 
-            return MonologValue.newBuilder(registeredAndActive).build();
+            return Alarm.newBuilder(registeredAndActive).build();
         }
     }
 
@@ -294,7 +294,7 @@ public class MonologRule extends ProcessingRule {
         return new KeyValue<>(key.getName(), new OverrideList(list));
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, MonologValue, KeyValue<String, MonologValue>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
 
         private final String storeName;
 
@@ -313,8 +313,8 @@ public class MonologRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
-            return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
+        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
+            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
                 private KeyValueStore<String, ActiveAlarm> store;
                 private ProcessorContext context;
 
@@ -326,7 +326,7 @@ public class MonologRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
+                public KeyValue<String, Alarm> transform(String key, Alarm value) {
                     ActiveAlarm previous = store.get(key);
                     ActiveAlarm next = null;
 

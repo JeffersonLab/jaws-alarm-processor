@@ -14,15 +14,15 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class OneShotRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, MonologValue> inputTopicMonolog;
-    private TestOutputTopic<String, MonologValue> outputPassthroughTopic;
+    private TestInputTopic<String, Alarm> inputTopicMonolog;
+    private TestOutputTopic<String, Alarm> outputPassthroughTopic;
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputOverrideTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
     private RegisteredClass class1;
     private ActiveAlarm active1;
     private ActiveAlarm active2;
-    private MonologValue mono1;
+    private Alarm mono1;
 
     @Before
     public void setup() {
@@ -66,7 +66,7 @@ public class OneShotRuleTest {
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
 
-        mono1 = new MonologValue();
+        mono1 = new Alarm();
         mono1.setActive(active1);
         mono1.setClass$(class1);
         mono1.setRegistered(registered1);
@@ -93,7 +93,7 @@ public class OneShotRuleTest {
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);
-        List<KeyValue<String, MonologValue>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(0, overrideResults.size());
@@ -113,13 +113,13 @@ public class OneShotRuleTest {
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);
-        List<KeyValue<String, MonologValue>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, overrideResults.size());
         Assert.assertEquals(1, passthroughResults.size());
 
-        KeyValue<String, MonologValue> passResult = passthroughResults.get(0);
+        KeyValue<String, Alarm> passResult = passthroughResults.get(0);
 
         Assert.assertEquals(true, passResult.value.getTransitions().getUnshelving());
     }
@@ -135,13 +135,13 @@ public class OneShotRuleTest {
         inputTopicMonolog.pipeInput("alarm1", mono1);
 
 
-        MonologValue mono2 = MonologValue.newBuilder(mono1).build();
+        Alarm mono2 = Alarm.newBuilder(mono1).build();
 
         inputTopicMonolog.pipeInput("alarm1", mono2);
 
 
 
-        List<KeyValue<String, MonologValue>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(0, overrideResults.size());

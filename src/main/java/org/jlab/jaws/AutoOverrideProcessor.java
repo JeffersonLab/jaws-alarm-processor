@@ -26,7 +26,7 @@ public class AutoOverrideProcessor {
         rules.add(new MonologRule("registered-classes", "registered-alarms", "active-alarms", "overridden-alarms", "monolog"));
         rules.add(new LatchRule("monolog", "latch-processed", "overridden-alarms"));
         rules.add(new OneShotRule("latch-processed", "unshelve-processed", "overridden-alarms"));
-        rules.add(new EffectiveStateRule("unshelve-processed", "jaws-alarms"));
+        rules.add(new EffectiveStateRule("unshelve-processed", "alarms"));
 
         final CountDownLatch latch = new CountDownLatch(1);
 

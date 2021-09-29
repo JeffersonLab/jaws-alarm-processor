@@ -21,7 +21,7 @@ public class MonologRuleTest {
     private TestInputTopic<String, RegisteredClass> inputTopicClasses;
     private TestInputTopic<String, ActiveAlarm> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
-    private TestOutputTopic<String, MonologValue> outputTopic;
+    private TestOutputTopic<String, Alarm> outputTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
     private RegisteredClass class1;
@@ -90,7 +90,7 @@ public class MonologRuleTest {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegistered.pipeInput("alarm1", registered2);
-        List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(2, results.size());
     }
 
@@ -100,19 +100,19 @@ public class MonologRuleTest {
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegistered.pipeInput("alarm1", registered1);
         inputTopicClasses.pipeInput("base", class1);
-        List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, MonologValue> result: results) {
+        for(KeyValue<String, Alarm> result: results) {
             System.err.println(result);
         }
 
         Assert.assertEquals(3, results.size());
 
-        KeyValue<String, MonologValue> result2 = results.get(2);
+        KeyValue<String, Alarm> result2 = results.get(2);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new OverrideSet(), new TransitionSet(), AlarmState.Normal), result2.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new OverrideSet(), new TransitionSet(), AlarmState.Normal), result2.value);
     }
 
     @Test
@@ -138,22 +138,22 @@ public class MonologRuleTest {
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), null);
 
 
-        List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, MonologValue> result: results) {
+        for(KeyValue<String, Alarm> result: results) {
             System.err.println(result);
         }
 
         Assert.assertEquals(6, results.size());
 
-        KeyValue<String, MonologValue> result = results.get(5);
+        KeyValue<String, Alarm> result = results.get(5);
 
         OverrideSet overrides = OverrideSet.newBuilder()
                 .build();
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, new TransitionSet(), AlarmState.Normal), result.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, new TransitionSet(), AlarmState.Normal), result.value);
     }
 
     @Test
@@ -172,21 +172,21 @@ public class MonologRuleTest {
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicActive.pipeInput("alarm1", active1);
 
-        List<KeyValue<String, MonologValue>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(5, results.size());
 
 
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, MonologValue> result: results) {
+        for(KeyValue<String, Alarm> result: results) {
             System.err.println(result);
         }
 
-        KeyValue<String, MonologValue> result0 = results.get(0);
-        KeyValue<String, MonologValue> result1 = results.get(1);
-        KeyValue<String, MonologValue> result2 = results.get(2);
-        KeyValue<String, MonologValue> result3 = results.get(3);
-        KeyValue<String, MonologValue> result4 = results.get(4);
+        KeyValue<String, Alarm> result0 = results.get(0);
+        KeyValue<String, Alarm> result1 = results.get(1);
+        KeyValue<String, Alarm> result2 = results.get(2);
+        KeyValue<String, Alarm> result3 = results.get(3);
+        KeyValue<String, Alarm> result4 = results.get(4);
 
         Assert.assertEquals("alarm1", result0.key);
 
@@ -195,16 +195,16 @@ public class MonologRuleTest {
 
         TransitionSet transitions = TransitionSet.newBuilder().build();
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, transitions, AlarmState.Normal), result0.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, null, overrides, transitions, AlarmState.Normal), result0.value);
 
         TransitionSet transitions2 = TransitionSet.newBuilder().setTransitionToActive(true).build();
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result1.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result1.value);
 
         TransitionSet transitions3 = TransitionSet.newBuilder().setTransitionToNormal(true).build();
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, transitions3, AlarmState.Normal), result2.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, null, overrides, transitions3, AlarmState.Normal), result2.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result3.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result3.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions, AlarmState.Normal), result4.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions, AlarmState.Normal), result4.value);
     }
 }

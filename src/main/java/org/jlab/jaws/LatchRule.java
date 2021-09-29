@@ -31,7 +31,7 @@ public class LatchRule extends ProcessingRule {
     String overridesOutputTopic;
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -66,22 +66,22 @@ public class LatchRule extends ProcessingRule {
         OVERRIDE_KEY_SERDE.configure(config, true);
         OVERRIDE_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, MonologValue> monologTable = builder.table(inputTopic,
+        final KTable<String, Alarm> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        final KStream<String, MonologValue> monologStream = monologTable.toStream();
+        final KStream<String, Alarm> monologStream = monologTable.toStream();
 
-        KStream<String, MonologValue> latchOverrideMonolog = monologStream.filter(new Predicate<String, MonologValue>() {
+        KStream<String, Alarm> latchOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
             @Override
-            public boolean test(String key, MonologValue value) {
+            public boolean test(String key, Alarm value) {
                 //System.err.println("Filtering: " + key + ", value: " + value);
                 return value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitions().getTransitionToActive();
             }
         });
 
-        KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, MonologValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+        KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, MonologValue value) {
+            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, Alarm value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
             }
         });
@@ -96,7 +96,7 @@ public class LatchRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, MonologValue> passthrough = monologStream.transform(
+        final KStream<String, Alarm> passthrough = monologStream.transform(
                 new MsgTransformerFactory(storeBuilder.name()),
                 Named.as("LatchTransitionProcessor"),
                 storeBuilder.name());
@@ -109,7 +109,7 @@ public class LatchRule extends ProcessingRule {
         return top;
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, MonologValue, KeyValue<String, MonologValue>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
 
         private final String storeName;
 
@@ -128,8 +128,8 @@ public class LatchRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
-            return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
+        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
+            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
                 private KeyValueStore<String, String> store;
                 private ProcessorContext context;
 
@@ -141,7 +141,7 @@ public class LatchRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
+                public KeyValue<String, Alarm> transform(String key, Alarm value) {
                     //System.err.println("Processing key = " + key + ", value = " + value);
 
                     // Skip the filter unless latching is registered

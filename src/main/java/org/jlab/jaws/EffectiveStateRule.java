@@ -29,7 +29,7 @@ public class EffectiveStateRule extends ProcessingRule {
     private static final Logger log = LoggerFactory.getLogger(EffectiveStateRule.class);
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -57,13 +57,13 @@ public class EffectiveStateRule extends ProcessingRule {
 
         MONOLOG_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, MonologValue> monologTable = builder.table(inputTopic,
+        final KTable<String, Alarm> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        final KStream<String, MonologValue> monologStream = monologTable.toStream();
+        final KStream<String, Alarm> monologStream = monologTable.toStream();
 
 
-        final KStream<String, MonologValue> output = monologStream.transform(
+        final KStream<String, Alarm> output = monologStream.transform(
                 new EffectiveStateRule.MsgTransformerFactory(),
                 Named.as("EffectiveStateTransitionProcessor"));
 
@@ -73,7 +73,7 @@ public class EffectiveStateRule extends ProcessingRule {
         return builder.build();
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, MonologValue, KeyValue<String, MonologValue>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
 
         /**
          * Create a new MsgTransformerFactory.
@@ -88,8 +88,8 @@ public class EffectiveStateRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
-            return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
+        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
+            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
                 private ProcessorContext context;
 
                 @Override
@@ -99,7 +99,7 @@ public class EffectiveStateRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
+                public KeyValue<String, Alarm> transform(String key, Alarm value) {
                     System.err.println("Processing key = " + key + ", value = " + value);
 
                     // Note: criteria are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
