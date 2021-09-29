@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "ShelvedAlarm",
+  "name": "ShelvedOverride",
   "namespace": "org.jlab.jaws.entity",
   "doc": "A temporarily suppressed alarm override",
   "fields": [
@@ -19,7 +19,7 @@
       "name": "reason",
       "type": {
         "type": "enum",
-        "name": "ShelvedAlarmReason",
+        "name": "ShelvedReason",
         "doc": "Enumeration of possible reasons",
         "symbols": [
           "Stale_Alarm",

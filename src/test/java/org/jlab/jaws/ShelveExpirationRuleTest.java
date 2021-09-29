@@ -19,8 +19,8 @@ public class ShelveExpirationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopic;
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputTopic;
-    private ShelvedAlarm alarm1;
-    private ShelvedAlarm alarm2;
+    private ShelvedOverride override1;
+    private ShelvedOverride override2;
 
     @Before
     public void setup() {
@@ -35,13 +35,13 @@ public class ShelveExpirationRuleTest {
         inputTopic = testDriver.createInputTopic(rule.inputTopic, ShelveExpirationRule.INPUT_KEY_SERDE.serializer(), ShelveExpirationRule.INPUT_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(rule.outputTopic, ShelveExpirationRule.OUTPUT_KEY_SERDE.deserializer(), ShelveExpirationRule.OUTPUT_VALUE_SERDE.deserializer());
 
-        alarm1 = new ShelvedAlarm();
-        alarm1.setReason(ShelvedAlarmReason.Chattering_Fleeting_Alarm);
-        alarm1.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
+        override1 = new ShelvedOverride();
+        override1.setReason(ShelvedReason.Chattering_Fleeting_Alarm);
+        override1.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
 
-        alarm2 = new ShelvedAlarm();
-        alarm2.setReason(ShelvedAlarmReason.Chattering_Fleeting_Alarm);
-        alarm2.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
+        override2 = new ShelvedOverride();
+        override2.setReason(ShelvedReason.Chattering_Fleeting_Alarm);
+        override2.setExpiration(Instant.now().plusSeconds(5).getEpochSecond() * 1000);
     }
 
     @After
@@ -52,8 +52,8 @@ public class ShelveExpirationRuleTest {
     @Test
     public void tombstoneMsg() throws InterruptedException {
         List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> keyValues = new ArrayList<>();
-        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm1)));
-        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm2)));
+        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override1)));
+        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override2)));
         inputTopic.pipeKeyValueList(keyValues, Instant.now(), Duration.ofSeconds(5));
         testDriver.advanceWallClockTime(Duration.ofSeconds(5));
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValuesToList().get(0);
@@ -62,9 +62,9 @@ public class ShelveExpirationRuleTest {
 
     @Test
     public void notYetExpired() {
-        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm1));
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override1));
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopic.pipeInput(new OverriddenAlarmKey("alarm2", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm2));
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm2", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override2));
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertNull(result.value);
@@ -72,7 +72,7 @@ public class ShelveExpirationRuleTest {
 
     @Test
     public void expired() {
-        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(alarm1));
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override1));
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValue();
         Assert.assertEquals("alarm1", result.key.getName());

@@ -41,10 +41,10 @@
       "doc": "An off-delayed override"
     },
     {
-      "type": ["null", "ShelvedAlarm"],
+      "type": ["null", "ShelvedOverride"],
       "default": null,
       "name": "shelved",
-      "doc": "A temporarily suppressed override"
+      "doc": "A shelved override"
     }
   ]
 }

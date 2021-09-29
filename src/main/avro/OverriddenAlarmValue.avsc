@@ -13,43 +13,7 @@
         "MaskedOverride",
         "OnDelayedOverride",
         "OffDelayedOverride",
-        {
-          "type": "record",
-          "name": "ShelvedAlarm",
-          "doc" : "A temporarily suppressed alarm override",
-          "fields": [
-            {
-              "name": "oneshot",
-              "type": "boolean",
-              "doc": "Indicates whether this shelved alarm unshelves when active; otherwise considered a continuous shelve and clears only upon expiration or manual operator intervention",
-              "default": false
-            },
-            {
-              "name": "expiration",
-              "type": "long",
-              "doc": "Unix timestamp of milliseconds since Epoch of Jan 1. 1970 - Timestamp denotes when this shelved alarm should expire"
-            },
-            {
-              "name": "reason",
-              "type": {
-                "type": "enum",
-                "name": "ShelvedAlarmReason",
-                "doc": "Enumeration of possible reasons",
-                "symbols": [
-                  "Stale_Alarm",
-                  "Chattering_Fleeting_Alarm",
-                  "Other"
-                ]
-              },
-              "doc": "Reason this alarm is shelved"
-            },
-            {
-              "name": "comments",
-              "type": ["null", "string"],
-              "doc": "Operator explanation"
-            }
-          ]
-        }
+        "ShelvedOverride"
       ],
       "doc": "Suppressed alarm value modeled as a nested union to avoid complications of union at root of schema."
     }

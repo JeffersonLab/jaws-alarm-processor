@@ -6,10 +6,7 @@ import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
-import org.jlab.jaws.entity.OverriddenAlarmKey;
-import org.jlab.jaws.entity.OverriddenAlarmType;
-import org.jlab.jaws.entity.OverriddenAlarmValue;
-import org.jlab.jaws.entity.ShelvedAlarm;
+import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,10 +119,10 @@ public class ShelveExpirationRule extends ProcessingRule {
                     }
 
 
-                    ShelvedAlarm sa = null;
+                    ShelvedOverride sa = null;
 
-                    if(value != null && value.getMsg() instanceof ShelvedAlarm) {
-                        sa = (ShelvedAlarm) value.getMsg();
+                    if(value != null && value.getMsg() instanceof ShelvedOverride) {
+                        sa = (ShelvedOverride) value.getMsg();
                     }
 
                     if (sa != null && sa.getExpiration() > 0) { // Set new timer

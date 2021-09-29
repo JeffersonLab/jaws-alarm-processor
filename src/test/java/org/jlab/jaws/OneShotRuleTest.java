@@ -85,10 +85,10 @@ public class OneShotRuleTest {
 
     @Test
     public void notOneshot() {
-        ShelvedAlarm shelved = new ShelvedAlarm();
+        ShelvedOverride shelved = new ShelvedOverride();
         shelved.setOneshot(false);
         shelved.setExpiration(1000);
-        shelved.setReason(ShelvedAlarmReason.Other);
+        shelved.setReason(ShelvedReason.Other);
         mono1.getOverrides().setShelved(shelved);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
@@ -102,10 +102,10 @@ public class OneShotRuleTest {
 
     @Test
     public void oneshot() {
-        ShelvedAlarm shelved = new ShelvedAlarm();
+        ShelvedOverride shelved = new ShelvedOverride();
         shelved.setOneshot(true);
         shelved.setExpiration(1000);
-        shelved.setReason(ShelvedAlarmReason.Other);
+        shelved.setReason(ShelvedReason.Other);
         mono1.getOverrides().setShelved(shelved);
 
         mono1.getTransitions().setTransitionToActive(false);
@@ -126,10 +126,10 @@ public class OneShotRuleTest {
 
     @Test
     public void oneshotABunch() {
-        ShelvedAlarm shelved = new ShelvedAlarm();
+        ShelvedOverride shelved = new ShelvedOverride();
         shelved.setOneshot(true);
         shelved.setExpiration(1000);
-        shelved.setReason(ShelvedAlarmReason.Other);
+        shelved.setReason(ShelvedReason.Other);
         mono1.getOverrides().setShelved(shelved);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
