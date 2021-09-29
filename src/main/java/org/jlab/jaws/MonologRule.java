@@ -191,7 +191,7 @@ public class MonologRule extends ProcessingRule {
                     .setEffectiveRegistration(effectiveRegistered)
                     .setActivation(null)
                     .setOverrides(new AlarmOverrides())
-                    .setTransitions(new TransitionSet())
+                    .setTransitions(new ProcessorTransitions())
                     .setState(AlarmState.Normal)
                     .build();
         }
@@ -213,7 +213,7 @@ public class MonologRule extends ProcessingRule {
                         .setClass$(null)
                         .setEffectiveRegistration(null)
                         .setOverrides(new AlarmOverrides())
-                        .setTransitions(new TransitionSet())
+                        .setTransitions(new ProcessorTransitions())
                         .setState(AlarmState.Normal)
                         .setActivation(active).build();
             }

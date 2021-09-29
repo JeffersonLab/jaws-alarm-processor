@@ -42,8 +42,8 @@
     },
     {
       "name": "transitions",
-      "type": "TransitionSet",
-      "doc": "override transition states"
+      "type": "ProcessorTransitions",
+      "doc": "override transition states used by alarm processor"
     },
     {
       "name": "state",

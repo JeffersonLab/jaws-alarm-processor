@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "TransitionSet",
+  "name": "ProcessorTransitions",
   "namespace": "org.jlab.jaws.entity",
   "doc": "Set of alarm transitions",
   "fields": [

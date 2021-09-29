@@ -112,7 +112,7 @@ public class MonologRuleTest {
         KeyValue<String, Alarm> result2 = results.get(2);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrides(), new TransitionSet(), AlarmState.Normal), result2.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrides(), new ProcessorTransitions(), AlarmState.Normal), result2.value);
     }
 
     @Test
@@ -153,7 +153,7 @@ public class MonologRuleTest {
                 .build();
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, new TransitionSet(), AlarmState.Normal), result.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, new ProcessorTransitions(), AlarmState.Normal), result.value);
     }
 
     @Test
@@ -193,14 +193,14 @@ public class MonologRuleTest {
         AlarmOverrides overrides = AlarmOverrides.newBuilder()
                 .build();
 
-        TransitionSet transitions = TransitionSet.newBuilder().build();
+        ProcessorTransitions transitions = ProcessorTransitions.newBuilder().build();
 
         Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, null, overrides, transitions, AlarmState.Normal), result0.value);
 
-        TransitionSet transitions2 = TransitionSet.newBuilder().setTransitionToActive(true).build();
+        ProcessorTransitions transitions2 = ProcessorTransitions.newBuilder().setTransitionToActive(true).build();
         Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result1.value);
 
-        TransitionSet transitions3 = TransitionSet.newBuilder().setTransitionToNormal(true).build();
+        ProcessorTransitions transitions3 = ProcessorTransitions.newBuilder().setTransitionToNormal(true).build();
         Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, null, overrides, transitions3, AlarmState.Normal), result2.value);
 
         Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result3.value);
