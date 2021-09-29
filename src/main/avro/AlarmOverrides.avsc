@@ -23,7 +23,7 @@
       "doc": "A latched override"
     },
     {
-      "type": ["null", "MaskedAlarm"],
+      "type": ["null", "MaskedOverride"],
       "default": null,
       "name": "masked",
       "doc": "A masked override"

@@ -10,12 +10,7 @@
         "DisabledOverride",
         "FilteredOverride",
         "LatchedOverride",
-        {
-          "type": "record",
-          "name": "MaskedAlarm",
-          "doc": "A masked alarm message value",
-          "fields": []
-        },
+        "MaskedOverride",
         {
           "type": "record",
           "name": "OnDelayedAlarm",

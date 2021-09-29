@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "MaskedAlarm",
+  "name": "MaskedOverride",
   "namespace": "org.jlab.jaws.entity",
-  "doc": "A masked alarm message value",
+  "doc": "A masked override",
   "fields": []
 }
