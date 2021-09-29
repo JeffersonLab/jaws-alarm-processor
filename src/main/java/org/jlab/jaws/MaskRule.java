@@ -7,6 +7,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.StoreBuilder;
+import org.apache.kafka.streams.state.Stores;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,24 +29,20 @@ public class MaskRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(MaskRule.class);
 
-    public static final String OUTPUT_TOPIC = "overridden-alarms";
+    String overridesOutputTopic;
 
-    public static final String INPUT_TOPIC_REGISTERED = "registered-alarms";
-    public static final String INPUT_TOPIC_ACTIVE = "active-alarms";
+    public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
-    public static final Serdes.StringSerde INPUT_KEY_ACTIVE_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<RegisteredAlarm> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<ActiveAlarm> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
+    public static final Serdes.StringSerde MASK_STORE_KEY_SERDE = new Serdes.StringSerde();
+    public static final Serdes.StringSerde MASK_STORE_VALUE_SERDE = new Serdes.StringSerde();
 
-    public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<OverriddenAlarmValue> OUTPUT_VALUE_SERDE = new SpecificAvroSerde<>();
-
-    public static final SpecificAvroSerde<MaskJoin> REGISTERED_ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
-
-    public MaskRule(String inputTopic, String outputTopic) {
+    public MaskRule(String inputTopic, String outputTopic, String overridesOutputTopic) {
         super(inputTopic, outputTopic);
+        this.overridesOutputTopic = overridesOutputTopic;
     }
 
     @Override
@@ -62,55 +62,139 @@ public class MaskRule extends ProcessingRule {
         Map<String, String> config = new HashMap<>();
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
 
-        INPUT_VALUE_REGISTERED_SERDE.configure(config, false);
-        INPUT_VALUE_ACTIVE_SERDE.configure(config, false);
+        MONOLOG_VALUE_SERDE.configure(config, false);
 
-        OUTPUT_KEY_SERDE.configure(config, true);
-        OUTPUT_VALUE_SERDE.configure(config, false);
+        OVERRIDE_KEY_SERDE.configure(config, true);
+        OVERRIDE_VALUE_SERDE.configure(config, false);
 
-        REGISTERED_ACTIVE_VALUE_SERDE.configure(config, false);
+        final KTable<String, Alarm> monologTable = builder.table(inputTopic,
+                Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        final KTable<String, RegisteredAlarm> registeredTable = builder.table(INPUT_TOPIC_REGISTERED,
-                Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
-        final KTable<String, ActiveAlarm> activeTable = builder.table(INPUT_TOPIC_ACTIVE,
-                Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
+        final KStream<String, Alarm> monologStream = monologTable.toStream();
 
-
-        KTable<String, MaskJoin> maskJoined = registeredTable.join(activeTable, new MaskJoiner(), Materialized.with(Serdes.String(), REGISTERED_ACTIVE_VALUE_SERDE));
-
-        // Only allow messages indicating an alarm is both active and has a maskedby to pass
-        KStream<String, MaskJoin> filtered = maskJoined.toStream().filter(new Predicate<String, MaskJoin>() {
+        // TODO: Foreign key join on maskedBy field?  Parent active/normal status part of computation
+        // Computing parent effective state might be too much (parent overrides) - just use actual parent active or not?
+        KStream<String, Alarm> maskOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
             @Override
-            public boolean test(String key, MaskJoin value) {
-                log.trace("filtering masked: {}={}", key, value);
-                return value != null && value.getActive() && value.getMaskedby() != null;
+            public boolean test(String key, Alarm value) {
+                System.err.println("Filtering: " + key + ", value: " + value);
+                return value.getOverrides().getMasked() == null && value.getTransitions().getTransitionToActive();
             }
         });
 
-        // Now map into overridden-alarms topic format
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> out = filtered.map(new KeyValueMapper<String, MaskJoin, KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue>>() {
+        KStream<OverriddenAlarmKey, OverriddenAlarmValue> maskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
             @Override
-            public KeyValue<? extends OverriddenAlarmKey, ? extends OverriddenAlarmValue> apply(String key, MaskJoin value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), new OverriddenAlarmValue(new MaskedAlarm()));
+            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, Alarm value) {
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), new OverriddenAlarmValue(new MaskedOverride()));
             }
-        }, Named.as("Map-Mask"));
+        });
 
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> transformed = out
-                .transform(new OverriddenAddHeadersFactory());
+        maskOverrides.to(overridesOutputTopic, Produced.as("Mask-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
-        transformed.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms")
-                .with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
+
+        KStream<String, Alarm> unmaskOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
+            @Override
+            public boolean test(String key, Alarm value) {
+                System.err.println("Filtering: " + key + ", value: " + value);
+                return value.getOverrides().getMasked() != null && value.getTransitions().getTransitionToNormal();
+            }
+        });
+
+        KStream<OverriddenAlarmKey, OverriddenAlarmValue> unmaskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+            @Override
+            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, Alarm value) {
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), null);
+            }
+        });
+
+        unmaskOverrides.to(overridesOutputTopic, Produced.as("Unmask-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
+
+
+        final StoreBuilder<KeyValueStore<String, String>> storeBuilder = Stores.keyValueStoreBuilder(
+                Stores.persistentKeyValueStore("MaskStateStore"),
+                MASK_STORE_KEY_SERDE,
+                MASK_STORE_VALUE_SERDE
+        ).withCachingEnabled();
+
+        builder.addStateStore(storeBuilder);
+
+        final KStream<String, Alarm> passthrough = monologStream.transform(
+                new MaskRule.MsgTransformerFactory(storeBuilder.name()),
+                Named.as("MaskTransitionProcessor"),
+                storeBuilder.name());
+
+        passthrough.to(outputTopic, Produced.as("Mask-Passthrough")
+                .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
     }
 
-    private final class MaskJoiner implements ValueJoiner<RegisteredAlarm, ActiveAlarm, MaskJoin> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
 
-        public MaskJoin apply(RegisteredAlarm registered, ActiveAlarm active) {
-            return MaskJoin.newBuilder()
-                    .setActive(active != null)
-                    .setMaskedby(registered.getMaskedby())
-                    .build();
+        private final String storeName;
+
+        /**
+         * Create a new MsgTransformerFactory.
+         *
+         * @param storeName The state store name
+         */
+        public MsgTransformerFactory(String storeName) {
+            this.storeName = storeName;
+        }
+
+        /**
+         * Return a new {@link Transformer} instance.
+         *
+         * @return a new {@link Transformer} instance
+         */
+        @Override
+        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
+            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
+                private KeyValueStore<String, String> store;
+                private ProcessorContext context;
+
+                @Override
+                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
+                public void init(ProcessorContext context) {
+                    this.context = context;
+                    this.store = (KeyValueStore<String, String>) context.getStateStore(storeName);
+                }
+
+                @Override
+                public KeyValue<String, Alarm> transform(String key, Alarm value) {
+                    System.err.println("Processing key = " + key + ", value = " + value);
+
+                    // TODO: store and compute both masking and unmasking state
+                    boolean masking = false;
+                    boolean unmasking = false;
+
+                    if(value.getOverrides().getMasked() != null) {
+
+                        // Check if already mask in-progress
+                        masking = store.get(key) != null;
+
+                        // Check if we need to mask
+                        boolean needToMask = value.getTransitions().getTransitionToActive();
+
+                        if (needToMask) {
+                            masking = true;
+                        }
+                    }
+
+                    store.put(key, masking ? "y" : null);
+
+                    if (masking) { // Update transition state
+                        //value.getTransitions().setMasking(true);
+                    }
+
+                    return new KeyValue<>(key, value);
+                }
+
+                @Override
+                public void close() {
+                    // Nothing to do
+                }
+            };
         }
     }
 }
