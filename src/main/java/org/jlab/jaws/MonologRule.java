@@ -1,7 +1,6 @@
 package org.jlab.jaws;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
-import org.apache.avro.generic.GenericData;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -16,10 +15,6 @@ import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
-import java.time.temporal.TemporalUnit;
 import java.util.*;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
@@ -29,7 +24,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
  * processing can be done.   A store of the previous active record for each alarm is used to determine
  * transitions from active to normal and back.
  */
-public class MonologRule extends AutoOverrideRule {
+public class MonologRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(MonologRule.class);
 

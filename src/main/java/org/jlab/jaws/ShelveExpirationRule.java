@@ -1,8 +1,6 @@
 package org.jlab.jaws;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
@@ -15,9 +13,6 @@ import org.jlab.jaws.entity.ShelvedAlarm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -30,7 +25,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 /**
  * Expires Shelved overrides by setting timers.
  */
-public class ShelveExpirationRule extends AutoOverrideRule {
+public class ShelveExpirationRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(ShelveExpirationRule.class);
 

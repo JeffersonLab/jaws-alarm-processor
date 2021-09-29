@@ -21,7 +21,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
  * Adds a Masked override to an alarm with an active parent alarm and removes the Masked override when the parent
  * alarm is no longer active.
  */
-public class MaskRule extends AutoOverrideRule {
+public class MaskRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(MaskRule.class);
 
@@ -92,7 +92,7 @@ public class MaskRule extends AutoOverrideRule {
         }, Named.as("Map-Mask"));
 
         final KStream<OverriddenAlarmKey, OverriddenAlarmValue> transformed = out
-                .transform(new AddHeadersFactory());
+                .transform(new OverriddenAddHeadersFactory());
 
         transformed.to(OUTPUT_TOPIC, Produced.as("Overridden-Alarms")
                 .with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));

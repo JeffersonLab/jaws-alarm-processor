@@ -24,7 +24,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 /**
  * Adds a Latched override for alarms registered as latching that become active.
  */
-public class LatchRule extends AutoOverrideRule {
+public class LatchRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(LatchRule.class);
 

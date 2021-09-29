@@ -10,7 +10,7 @@ import java.util.concurrent.*;
 
 public class AutoOverrideProcessor {
     private static final Logger log = LoggerFactory.getLogger(AutoOverrideProcessor.class);
-    private static final Set<AutoOverrideRule> rules = new HashSet<>();
+    private static final Set<ProcessingRule> rules = new HashSet<>();
 
     /**
      * Entrypoint of the application.
@@ -30,7 +30,7 @@ public class AutoOverrideProcessor {
         Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
             @Override
             public void run() {
-                for(AutoOverrideRule rule: rules) {
+                for(ProcessingRule rule: rules) {
                     try {
                         rule.close();
                     } catch(Exception e) {
@@ -42,7 +42,7 @@ public class AutoOverrideProcessor {
         });
 
         try {
-            for(AutoOverrideRule rule: rules) {
+            for(ProcessingRule rule: rules) {
                 rule.start();
             }
             latch.await();

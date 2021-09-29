@@ -24,7 +24,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 /**
  * Removes Shelved override when alarm is no longer active for overrides configured as one-shot.
  */
-public class OneShotRule extends AutoOverrideRule {
+public class OneShotRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(OneShotRule.class);
 

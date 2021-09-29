@@ -22,9 +22,9 @@ import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
-public abstract class AutoOverrideRule {
+public abstract class ProcessingRule {
 
-    private static final Logger log = LoggerFactory.getLogger(AutoOverrideRule.class);
+    private static final Logger log = LoggerFactory.getLogger(ProcessingRule.class);
 
     KafkaStreams streams;
     Properties props;
@@ -84,7 +84,7 @@ public abstract class AutoOverrideRule {
         }
     }
 
-    public final class AddHeadersFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
+    public final class OverriddenAddHeadersFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
 
         /**
          * Return a new {@link Transformer} instance.
