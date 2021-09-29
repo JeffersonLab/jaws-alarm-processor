@@ -26,7 +26,7 @@ public class OneShotRuleTest {
 
     @Before
     public void setup() {
-        final OneShotRule rule = new OneShotRule();
+        final OneShotRule rule = new OneShotRule("latch-processed", "oneshot-processed", "overridden-alarms");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -34,9 +34,9 @@ public class OneShotRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicMonolog = testDriver.createInputTopic(OneShotRule.INPUT_TOPIC, OneShotRule.MONOLOG_KEY_SERDE.serializer(), OneShotRule.MONOLOG_VALUE_SERDE.serializer());
-        outputPassthroughTopic = testDriver.createOutputTopic(OneShotRule.OUTPUT_TOPIC_PASSTHROUGH, OneShotRule.MONOLOG_KEY_SERDE.deserializer(), OneShotRule.MONOLOG_VALUE_SERDE.deserializer());
-        outputOverrideTopic = testDriver.createOutputTopic(OneShotRule.OUTPUT_TOPIC_OVERRIDE, OneShotRule.OVERRIDE_KEY_SERDE.deserializer(), OneShotRule.OVERRIDE_VALUE_SERDE.deserializer());
+        inputTopicMonolog = testDriver.createInputTopic(rule.inputTopic, OneShotRule.MONOLOG_KEY_SERDE.serializer(), OneShotRule.MONOLOG_VALUE_SERDE.serializer());
+        outputPassthroughTopic = testDriver.createOutputTopic(rule.outputTopic, OneShotRule.MONOLOG_KEY_SERDE.deserializer(), OneShotRule.MONOLOG_VALUE_SERDE.deserializer());
+        outputOverrideTopic = testDriver.createOutputTopic(rule.overridesOutputTopic, OneShotRule.OVERRIDE_KEY_SERDE.deserializer(), OneShotRule.OVERRIDE_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
         registered2 = new RegisteredAlarm();

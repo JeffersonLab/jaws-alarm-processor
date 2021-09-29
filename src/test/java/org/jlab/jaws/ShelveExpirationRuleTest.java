@@ -24,7 +24,7 @@ public class ShelveExpirationRuleTest {
 
     @Before
     public void setup() {
-        final ShelveExpirationRule rule = new ShelveExpirationRule();
+        final ShelveExpirationRule rule = new ShelveExpirationRule("overridden-alarms", "overridden-alarms");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -32,8 +32,8 @@ public class ShelveExpirationRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopic = testDriver.createInputTopic(ShelveExpirationRule.INPUT_TOPIC, ShelveExpirationRule.INPUT_KEY_SERDE.serializer(), ShelveExpirationRule.INPUT_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(ShelveExpirationRule.OUTPUT_TOPIC, ShelveExpirationRule.OUTPUT_KEY_SERDE.deserializer(), ShelveExpirationRule.OUTPUT_VALUE_SERDE.deserializer());
+        inputTopic = testDriver.createInputTopic(rule.inputTopic, ShelveExpirationRule.INPUT_KEY_SERDE.serializer(), ShelveExpirationRule.INPUT_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(rule.outputTopic, ShelveExpirationRule.OUTPUT_KEY_SERDE.deserializer(), ShelveExpirationRule.OUTPUT_VALUE_SERDE.deserializer());
 
         alarm1 = new ShelvedAlarm();
         alarm1.setReason(ShelvedAlarmReason.Chattering_Fleeting_Alarm);

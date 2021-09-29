@@ -29,9 +29,6 @@ public class ShelveExpirationRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(ShelveExpirationRule.class);
 
-    public static final String INPUT_TOPIC = "overridden-alarms";
-    public static final String OUTPUT_TOPIC = INPUT_TOPIC;
-
     public static final SpecificAvroSerde<OverriddenAlarmKey> INPUT_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = INPUT_KEY_SERDE;
@@ -41,6 +38,10 @@ public class ShelveExpirationRule extends ProcessingRule {
      * Enumerations of all channels with expiration timers, mapped to the cancellable Executor handle.
      */
     public static Map<String, Cancellable> channelHandleMap = new ConcurrentHashMap<>();
+
+    public ShelveExpirationRule(String inputTopic, String outputTopic) {
+        super(inputTopic, outputTopic);
+    }
 
     @Override
     public Properties constructProperties() {
@@ -66,7 +67,7 @@ public class ShelveExpirationRule extends ProcessingRule {
         INPUT_KEY_SERDE.configure(config, true);
         INPUT_VALUE_SERDE.configure(config, false);
 
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> input = builder.stream(INPUT_TOPIC, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
+        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> input = builder.stream(inputTopic, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
 
         final KStream<OverriddenAlarmKey, OverriddenAlarmValue> shelvedOnly = input.filter(new Predicate<OverriddenAlarmKey, OverriddenAlarmValue>() {
             @Override
@@ -77,7 +78,7 @@ public class ShelveExpirationRule extends ProcessingRule {
 
         final KStream<OverriddenAlarmKey, OverriddenAlarmValue> output = shelvedOnly.transform(new MsgTransformerFactory());
 
-        output.to(OUTPUT_TOPIC, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
+        output.to(outputTopic, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
         return builder.build();
     }

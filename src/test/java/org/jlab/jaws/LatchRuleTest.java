@@ -30,7 +30,7 @@ public class LatchRuleTest {
 
     @Before
     public void setup() {
-        final LatchRule rule = new LatchRule();
+        final LatchRule rule = new LatchRule("monolog", "latch-processed", "overridden-alarms");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -41,9 +41,9 @@ public class LatchRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicMonolog = testDriver.createInputTopic(LatchRule.INPUT_TOPIC, LatchRule.MONOLOG_KEY_SERDE.serializer(), LatchRule.MONOLOG_VALUE_SERDE.serializer());
-        outputPassthroughTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC_PASSTHROUGH, LatchRule.MONOLOG_KEY_SERDE.deserializer(), LatchRule.MONOLOG_VALUE_SERDE.deserializer());
-        outputOverrideTopic = testDriver.createOutputTopic(LatchRule.OUTPUT_TOPIC_OVERRIDE, LatchRule.OVERRIDE_KEY_SERDE.deserializer(), LatchRule.OVERRIDE_VALUE_SERDE.deserializer());
+        inputTopicMonolog = testDriver.createInputTopic(rule.inputTopic, LatchRule.MONOLOG_KEY_SERDE.serializer(), LatchRule.MONOLOG_VALUE_SERDE.serializer());
+        outputPassthroughTopic = testDriver.createOutputTopic(rule.outputTopic, LatchRule.MONOLOG_KEY_SERDE.deserializer(), LatchRule.MONOLOG_VALUE_SERDE.deserializer());
+        outputOverrideTopic = testDriver.createOutputTopic(rule.overridesOutputTopic, LatchRule.OVERRIDE_KEY_SERDE.deserializer(), LatchRule.OVERRIDE_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
         registered2 = new RegisteredAlarm();

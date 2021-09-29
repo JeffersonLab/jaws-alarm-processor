@@ -31,7 +31,7 @@ public class MonologRuleTest {
 
     @Before
     public void setup() {
-        final MonologRule rule = new MonologRule();
+        final MonologRule rule = new MonologRule("registered-classes", "registered-alarms", "active-alarms", "overridden-alarms", "monolog");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -39,11 +39,11 @@ public class MonologRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicRegistered = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_REGISTERED, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
-        inputTopicClasses = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_CLASSES, MonologRule.INPUT_KEY_CLASSES_SERDE.serializer(), MonologRule.INPUT_VALUE_CLASSES_SERDE.serializer());
-        inputTopicActive = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_ACTIVE, MonologRule.INPUT_KEY_ACTIVE_SERDE.serializer(), MonologRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
-        inputTopicOverridden = testDriver.createInputTopic(MonologRule.INPUT_TOPIC_OVERRIDDEN, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(MonologRule.OUTPUT_TOPIC, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
+        inputTopicClasses = testDriver.createInputTopic(rule.inputTopicClasses, MonologRule.INPUT_KEY_CLASSES_SERDE.serializer(), MonologRule.INPUT_VALUE_CLASSES_SERDE.serializer());
+        inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicRegistered, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
+        inputTopicActive = testDriver.createInputTopic(rule.inputTopicActive, MonologRule.INPUT_KEY_ACTIVE_SERDE.serializer(), MonologRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
+        inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(rule.outputTopic, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
 
         registered1 = new RegisteredAlarm();
         registered2 = new RegisteredAlarm();

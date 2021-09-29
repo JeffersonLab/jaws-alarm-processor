@@ -29,6 +29,13 @@ public abstract class ProcessingRule {
     KafkaStreams streams;
     Properties props;
     Topology top;
+    String inputTopic;
+    String outputTopic;
+
+    public ProcessingRule(String inputTopic, String outputTopic) {
+        this.inputTopic = inputTopic;
+        this.outputTopic = outputTopic;
+    }
 
     public Properties constructProperties() {
         String bootstrapServers = System.getenv("BOOTSTRAP_SERVERS");

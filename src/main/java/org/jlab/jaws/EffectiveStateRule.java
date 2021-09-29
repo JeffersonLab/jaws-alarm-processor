@@ -28,15 +28,15 @@ public class EffectiveStateRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(EffectiveStateRule.class);
 
-    public static final String OUTPUT_TOPIC = "jaws-alarms";
-
-    public static final String INPUT_TOPIC = "unshelve-processed";
-
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+
+    public EffectiveStateRule(String inputTopic, String outputTopic) {
+        super(inputTopic, outputTopic);
+    }
 
     @Override
     public Properties constructProperties() {
@@ -57,7 +57,7 @@ public class EffectiveStateRule extends ProcessingRule {
 
         MONOLOG_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, MonologValue> monologTable = builder.table(INPUT_TOPIC,
+        final KTable<String, MonologValue> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         final KStream<String, MonologValue> monologStream = monologTable.toStream();
@@ -67,7 +67,7 @@ public class EffectiveStateRule extends ProcessingRule {
                 new EffectiveStateRule.MsgTransformerFactory(),
                 Named.as("EffectiveStateTransitionProcessor"));
 
-        output.to(OUTPUT_TOPIC, Produced.as("EFFECTIVE-STAT-OUTPUT")
+        output.to(outputTopic, Produced.as("EFFECTIVE-STAT-OUTPUT")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();

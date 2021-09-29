@@ -28,10 +28,7 @@ public class OneShotRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(OneShotRule.class);
 
-    public static final String OUTPUT_TOPIC_PASSTHROUGH = "oneshot-processed";
-    public static final String OUTPUT_TOPIC_OVERRIDE = "overridden-alarms";
-
-    public static final String INPUT_TOPIC = "latch-processed";
+    String overridesOutputTopic;
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -41,6 +38,11 @@ public class OneShotRule extends ProcessingRule {
 
     public static final Serdes.StringSerde ONESHOT_STORE_KEY_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde ONESHOT_STORE_VALUE_SERDE = new Serdes.StringSerde();
+
+    public OneShotRule(String inputTopic, String outputTopic, String overridesOutputTopic) {
+        super(inputTopic, outputTopic);
+        this.overridesOutputTopic = overridesOutputTopic;
+    }
 
     @Override
     public Properties constructProperties() {
@@ -64,7 +66,7 @@ public class OneShotRule extends ProcessingRule {
         OVERRIDE_KEY_SERDE.configure(config, true);
         OVERRIDE_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, MonologValue> monologTable = builder.table(INPUT_TOPIC,
+        final KTable<String, MonologValue> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         final KStream<String, MonologValue> monologStream = monologTable.toStream();
@@ -84,7 +86,7 @@ public class OneShotRule extends ProcessingRule {
             }
         });
 
-        oneshotOverrides.to(OUTPUT_TOPIC_OVERRIDE, Produced.as("Oneshot-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
+        oneshotOverrides.to(overridesOutputTopic, Produced.as("Oneshot-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
 
 
@@ -101,7 +103,7 @@ public class OneShotRule extends ProcessingRule {
                 Named.as("OneShotTransitionProcessor"),
                 storeBuilder.name());
 
-        passthrough.to(OUTPUT_TOPIC_PASSTHROUGH, Produced.as("Oneshot-Passthrough")
+        passthrough.to(outputTopic, Produced.as("Oneshot-Passthrough")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();

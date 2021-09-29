@@ -28,12 +28,10 @@ public class MonologRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(MonologRule.class);
 
-    public static final String OUTPUT_TOPIC = "monolog";
-
-    public static final String INPUT_TOPIC_REGISTERED = "registered-alarms";
-    public static final String INPUT_TOPIC_CLASSES = "registered-classes";
-    public static final String INPUT_TOPIC_ACTIVE = "active-alarms";
-    public static final String INPUT_TOPIC_OVERRIDDEN = "overridden-alarms";
+    String inputTopicClasses;
+    String inputTopicRegistered;
+    String inputTopicActive;
+    String inputTopicOverridden;
 
     public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde INPUT_KEY_CLASSES_SERDE = new Serdes.StringSerde();
@@ -50,6 +48,14 @@ public class MonologRule extends ProcessingRule {
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
+
+    public MonologRule(String inputTopicClasses, String inputTopicRegistered, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
+        super(null, outputTopic);
+        this.inputTopicClasses = inputTopicClasses;
+        this.inputTopicRegistered = inputTopicRegistered;
+        this.inputTopicActive = inputTopicActive;
+        this.inputTopicOverridden = inputTopicOverridden;
+    }
 
     @Override
     public Properties constructProperties() {
@@ -78,11 +84,11 @@ public class MonologRule extends ProcessingRule {
         MONOLOG_VALUE_SERDE.configure(config, false);
         OVERRIDE_LIST_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, RegisteredAlarm> registeredTable = builder.table(INPUT_TOPIC_REGISTERED,
-                Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
-        final KTable<String, RegisteredClass> classesTable = builder.table(INPUT_TOPIC_CLASSES,
+        final KTable<String, RegisteredClass> classesTable = builder.table(inputTopicClasses,
                 Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
-        final KTable<String, ActiveAlarm> activeTable = builder.table(INPUT_TOPIC_ACTIVE,
+        final KTable<String, RegisteredAlarm> registeredTable = builder.table(inputTopicRegistered,
+                Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
+        final KTable<String, ActiveAlarm> activeTable = builder.table(inputTopicActive,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
         KTable<String, MonologValue> classesAndRegistered = registeredTable.leftJoin(classesTable,
@@ -139,7 +145,7 @@ public class MonologRule extends ProcessingRule {
         final KStream<String, MonologValue> withHeaders = withTransitionState
                 .transform(new MonologAddHeadersFactory());
 
-        withHeaders.to(OUTPUT_TOPIC, Produced.as("Monolog")
+        withHeaders.to(outputTopic, Produced.as("Monolog")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
@@ -250,8 +256,8 @@ public class MonologRule extends ProcessingRule {
         }
     }
 
-    private static KTable<String, OverrideList> getOverriddenViaGroupBy(StreamsBuilder builder) {
-        final KTable<OverriddenAlarmKey, OverriddenAlarmValue> overriddenTable = builder.table(INPUT_TOPIC_OVERRIDDEN,
+    private KTable<String, OverrideList> getOverriddenViaGroupBy(StreamsBuilder builder) {
+        final KTable<OverriddenAlarmKey, OverriddenAlarmValue> overriddenTable = builder.table(inputTopicOverridden,
                 Consumed.as("Overridden-Table").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
         final KTable<String, OverrideList> groupTable = overriddenTable

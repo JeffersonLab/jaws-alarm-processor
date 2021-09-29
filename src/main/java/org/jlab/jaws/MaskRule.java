@@ -41,6 +41,10 @@ public class MaskRule extends ProcessingRule {
 
     public static final SpecificAvroSerde<MaskJoin> REGISTERED_ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
+    public MaskRule(String inputTopic, String outputTopic) {
+        super(inputTopic, outputTopic);
+    }
+
     @Override
     public Properties constructProperties() {
         final Properties props = super.constructProperties();

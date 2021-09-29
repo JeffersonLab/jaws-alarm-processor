@@ -28,10 +28,7 @@ public class LatchRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(LatchRule.class);
 
-    public static final String OUTPUT_TOPIC_PASSTHROUGH = "latch-processed";
-    public static final String OUTPUT_TOPIC_OVERRIDE = "overridden-alarms";
-
-    public static final String INPUT_TOPIC = "monolog";
+    String overridesOutputTopic;
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -41,6 +38,11 @@ public class LatchRule extends ProcessingRule {
 
     public static final Serdes.StringSerde LATCH_STORE_KEY_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde LATCH_STORE_VALUE_SERDE = new Serdes.StringSerde();
+
+    public LatchRule(String inputTopic, String outputTopic, String overridesOutputTopic) {
+        super(inputTopic, outputTopic);
+        this.overridesOutputTopic = overridesOutputTopic;
+    }
 
     @Override
     public Properties constructProperties() {
@@ -64,7 +66,7 @@ public class LatchRule extends ProcessingRule {
         OVERRIDE_KEY_SERDE.configure(config, true);
         OVERRIDE_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, MonologValue> monologTable = builder.table(INPUT_TOPIC,
+        final KTable<String, MonologValue> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         final KStream<String, MonologValue> monologStream = monologTable.toStream();
@@ -84,7 +86,7 @@ public class LatchRule extends ProcessingRule {
             }
         });
 
-        latchOverrides.to(OUTPUT_TOPIC_OVERRIDE, Produced.as("Latch-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
+        latchOverrides.to(overridesOutputTopic, Produced.as("Latch-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
         final StoreBuilder<KeyValueStore<String, String>> storeBuilder = Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore("LatchStateStore"),
@@ -99,7 +101,7 @@ public class LatchRule extends ProcessingRule {
                 Named.as("LatchTransitionProcessor"),
                 storeBuilder.name());
 
-        passthrough.to(OUTPUT_TOPIC_PASSTHROUGH, Produced.as("Latch-Passthrough")
+        passthrough.to(outputTopic, Produced.as("Latch-Passthrough")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         Topology top = builder.build();
