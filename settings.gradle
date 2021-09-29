@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'jaws-auto-override-processor'
+rootProject.name = 'jaws-alarm-processor'

@@ -42,7 +42,7 @@ test {
 }
 
 jar {
-    archiveFileName = 'alarm-processor.jar'
+    archiveFileName = 'jaws-alarm-processor.jar'
 }
 
 application {
