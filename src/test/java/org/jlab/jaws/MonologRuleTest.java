@@ -124,8 +124,8 @@ public class MonologRuleTest {
         inputTopicClasses.pipeInput("base", class1);
 
         OverriddenAlarmValue overriddenAlarmValue1 = new OverriddenAlarmValue();
-        LatchedAlarm latchedAlarm = new LatchedAlarm();
-        overriddenAlarmValue1.setMsg(latchedAlarm);
+        LatchedOverride latchedOverride = new LatchedOverride();
+        overriddenAlarmValue1.setMsg(latchedOverride);
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), overriddenAlarmValue1);
 
         OverriddenAlarmValue overriddenAlarmValue2 = new OverriddenAlarmValue();

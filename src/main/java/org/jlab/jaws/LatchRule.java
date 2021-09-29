@@ -82,7 +82,7 @@ public class LatchRule extends ProcessingRule {
         KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
             @Override
             public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, Alarm value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedAlarm()));
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedOverride()));
             }
         });
 

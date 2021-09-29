@@ -1,7 +1,7 @@
 {
   "type": "record",
-  "name": "LatchedAlarm",
+  "name": "LatchedOverride",
   "namespace": "org.jlab.jaws.entity",
-  "doc": "A latched alarm message value",
+  "doc": "A latched override",
   "fields": []
 }

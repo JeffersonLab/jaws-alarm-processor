@@ -9,12 +9,7 @@
       "type": [
         "DisabledOverride",
         "FilteredOverride",
-        {
-          "type": "record",
-          "name": "LatchedAlarm",
-          "doc": "A latched alarm message value",
-          "fields": []
-        },
+        "LatchedOverride",
         {
           "type": "record",
           "name": "MaskedAlarm",

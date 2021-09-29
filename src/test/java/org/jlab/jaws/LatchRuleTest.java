@@ -7,10 +7,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.management.MonitorInfo;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
@@ -133,11 +129,11 @@ public class LatchRuleTest {
         KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = overrideResults.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
-        Assert.assertEquals(new OverriddenAlarmValue(new LatchedAlarm()), result.value);
+        Assert.assertEquals(new OverriddenAlarmValue(new LatchedOverride()), result.value);
 
         Alarm mono2 = Alarm.newBuilder(mono1).build();
 
-        mono2.getOverrides().setLatched(new LatchedAlarm());
+        mono2.getOverrides().setLatched(new LatchedOverride());
         mono2.getTransitions().setTransitionToActive(false);
 
         inputTopicMonolog.pipeInput("alarm1", mono2);
