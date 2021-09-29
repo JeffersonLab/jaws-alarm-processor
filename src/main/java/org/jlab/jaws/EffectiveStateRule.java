@@ -102,9 +102,8 @@ public class EffectiveStateRule extends ProcessingRule {
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
                     System.err.println("Processing key = " + key + ", value = " + value);
 
-                    // Note: criteria are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
+                    // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
-                    // Should we have an Unregistered state or always default to Normal?
                     AlarmState state = AlarmState.Normal;
 
                     if(value.getActivation() != null) {
@@ -112,54 +111,38 @@ public class EffectiveStateRule extends ProcessingRule {
                     }
 
                     if(value.getOverrides().getOffdelay() != null) {
-                        state = AlarmState.OffDelayed;
+                        state = AlarmState.ActiveOffDelayed;
                     }
 
                     if(value.getTransitions().getLatching() ||
                             value.getOverrides().getLatched() != null) {
-                        if(value.getActivation() != null) {
-                            state = AlarmState.Latched;
-                        } else {
-                            state = AlarmState.NormalLatched;
-                        }
+                        state = AlarmState.ActiveLatched;
                     }
 
                     if(value.getOverrides().getOndelay() != null) {
-                        state = AlarmState.OnDelayed;
+                        state = AlarmState.NormalOnDelayed;
                     }
 
                     if(value.getOverrides().getShelved() != null &&
                             !value.getTransitions().getUnshelving()) {
 
                         if(value.getOverrides().getShelved().getOneshot()) {
-                            state = AlarmState.OneShotShelved;
+                            state = AlarmState.NormalOneShotShelved;
                         } else {
-                            if(value.getActivation() != null) {
-                                state = AlarmState.ContinuousShelved;
-                            } else {
-                                state = AlarmState.NormalContinuousShelved;
-                            }
+                            state = AlarmState.NormalContinuousShelved;
                         }
                     }
 
                     if(value.getOverrides().getMasked() != null) {
-                        state = AlarmState.Masked;
+                        state = AlarmState.NormalMasked;
                     }
 
                     if(value.getOverrides().getFiltered() != null) {
-                        if(value.getActivation() != null) {
-                            state = AlarmState.Filtered;
-                        } else {
-                            state = AlarmState.NormalFiltered;
-                        }
+                        state = AlarmState.NormalFiltered;
                     }
 
                     if(value.getOverrides().getDisabled() != null) {
-                        if(value.getActivation() != null) {
-                            state = AlarmState.Disabled;
-                        } else {
-                            state = AlarmState.NormalDisabled;
-                        }
+                        state = AlarmState.NormalDisabled;
                     }
 
                     value.setState(state);
