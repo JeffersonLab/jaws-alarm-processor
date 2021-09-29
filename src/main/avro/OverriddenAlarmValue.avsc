@@ -11,18 +11,7 @@
         "FilteredOverride",
         "LatchedOverride",
         "MaskedOverride",
-        {
-          "type": "record",
-          "name": "OnDelayedAlarm",
-          "doc": "An on-delayed alarm message value",
-          "fields": [
-            {
-              "name": "expiration",
-              "type": "long",
-              "doc": "Unix timestamp of milliseconds since Epoch of Jan 1. 1970 - Timestamp denotes when this delayed alarm should expire"
-            }
-          ]
-        },
+        "OnDelayedOverride",
         {
           "type": "record",
           "name": "OffDelayedAlarm",

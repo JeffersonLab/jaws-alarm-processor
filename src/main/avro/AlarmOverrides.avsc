@@ -29,7 +29,7 @@
       "doc": "A masked override"
     },
     {
-      "type": ["null", "OnDelayedAlarm"],
+      "type": ["null", "OnDelayedOverride"],
       "default": null,
       "name": "ondelay",
       "doc": "An on-delayed override"
