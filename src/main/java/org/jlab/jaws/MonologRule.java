@@ -39,7 +39,7 @@ public class MonologRule extends ProcessingRule {
 
     public static final SpecificAvroSerde<RegisteredAlarm> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<RegisteredClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<ActiveAlarm> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmActivation> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -88,7 +88,7 @@ public class MonologRule extends ProcessingRule {
                 Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
         final KTable<String, RegisteredAlarm> registeredTable = builder.table(inputTopicRegistered,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
-        final KTable<String, ActiveAlarm> activeTable = builder.table(inputTopicActive,
+        final KTable<String, AlarmActivation> activeTable = builder.table(inputTopicActive,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
         KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
@@ -129,7 +129,7 @@ public class MonologRule extends ProcessingRule {
                     }
                 });
 
-        final StoreBuilder<KeyValueStore<String, ActiveAlarm>> storeBuilder = Stores.keyValueStoreBuilder(
+        final StoreBuilder<KeyValueStore<String, AlarmActivation>> storeBuilder = Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore("PreviousActiveStateStore"),
                 INPUT_KEY_ACTIVE_SERDE,
                 INPUT_VALUE_ACTIVE_SERDE
@@ -197,9 +197,9 @@ public class MonologRule extends ProcessingRule {
         }
     }
 
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, ActiveAlarm, Alarm> {
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, AlarmActivation, Alarm> {
 
-        public Alarm apply(Alarm registered, ActiveAlarm active) {
+        public Alarm apply(Alarm registered, AlarmActivation active) {
 
             //System.err.println("active joiner: " + active + ", registered: " + registered);
 
@@ -315,20 +315,20 @@ public class MonologRule extends ProcessingRule {
         @Override
         public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
             return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
-                private KeyValueStore<String, ActiveAlarm> store;
+                private KeyValueStore<String, AlarmActivation> store;
                 private ProcessorContext context;
 
                 @Override
                 @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
                 public void init(ProcessorContext context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, ActiveAlarm>) context.getStateStore(storeName);
+                    this.store = (KeyValueStore<String, AlarmActivation>) context.getStateStore(storeName);
                 }
 
                 @Override
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    ActiveAlarm previous = store.get(key);
-                    ActiveAlarm next = null;
+                    AlarmActivation previous = store.get(key);
+                    AlarmActivation next = null;
 
                     //System.err.println("previous: " + previous);
                     //System.err.println("next: " + (value == null ? null : value.getActive()));

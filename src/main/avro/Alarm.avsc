@@ -31,7 +31,7 @@
       "name": "activation",
       "type": [
         "null",
-        "ActiveAlarm"
+        "AlarmActivation"
       ],
       "doc": "The alarm activation"
     },

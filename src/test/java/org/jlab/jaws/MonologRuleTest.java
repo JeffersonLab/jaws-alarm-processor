@@ -19,15 +19,15 @@ public class MonologRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, RegisteredAlarm> inputTopicRegistered;
     private TestInputTopic<String, RegisteredClass> inputTopicClasses;
-    private TestInputTopic<String, ActiveAlarm> inputTopicActive;
+    private TestInputTopic<String, AlarmActivation> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
     private TestOutputTopic<String, Alarm> outputTopic;
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
     private RegisteredClass class1;
     private RegisteredAlarm effectiveRegistered1;
-    private ActiveAlarm active1;
-    private ActiveAlarm active2;
+    private AlarmActivation active1;
+    private AlarmActivation active2;
 
     @Before
     public void setup() {
@@ -73,8 +73,8 @@ public class MonologRuleTest {
 
         effectiveRegistered1 = MonologRule.computeEffectiveRegistration(registered1, class1);
 
-        active1 = new ActiveAlarm();
-        active2 = new ActiveAlarm();
+        active1 = new AlarmActivation();
+        active2 = new AlarmActivation();
 
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());

@@ -1,8 +1,8 @@
 {
   "type"      : "record",
-  "name"      : "ActiveAlarm",
+  "name"      : "AlarmActivation",
   "namespace" : "org.jlab.jaws.entity",
-  "doc"       : "An active alarm",
+  "doc"       : "An alarm activation",
   "fields"    : [
     {
       "name" : "msg",

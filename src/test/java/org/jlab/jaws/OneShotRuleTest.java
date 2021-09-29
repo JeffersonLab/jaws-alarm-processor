@@ -20,8 +20,8 @@ public class OneShotRuleTest {
     private RegisteredAlarm registered1;
     private RegisteredAlarm registered2;
     private RegisteredClass class1;
-    private ActiveAlarm active1;
-    private ActiveAlarm active2;
+    private AlarmActivation active1;
+    private AlarmActivation active2;
     private Alarm mono1;
 
     @Before
@@ -60,8 +60,8 @@ public class OneShotRuleTest {
         class1.setPointofcontactusername("tester");
         class1.setRationale("because");
 
-        active1 = new ActiveAlarm();
-        active2 = new ActiveAlarm();
+        active1 = new AlarmActivation();
+        active2 = new AlarmActivation();
 
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
