@@ -35,7 +35,7 @@
       "doc": "An on-delayed override"
     },
     {
-      "type": ["null", "OffDelayedAlarm"],
+      "type": ["null", "OffDelayedOverride"],
       "default": null,
       "name": "offdelay",
       "doc": "An off-delayed override"

@@ -1,8 +1,8 @@
 {
   "type": "record",
-  "name": "OffDelayedAlarm",
+  "name": "OffDelayedOverride",
   "namespace": "org.jlab.jaws.entity",
-  "doc": "An off-delayed alarm message value",
+  "doc": "An off-delayed override",
   "fields": [
     {
       "name": "expiration",

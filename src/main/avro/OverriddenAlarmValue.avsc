@@ -12,18 +12,7 @@
         "LatchedOverride",
         "MaskedOverride",
         "OnDelayedOverride",
-        {
-          "type": "record",
-          "name": "OffDelayedAlarm",
-          "doc": "An off-delayed alarm message value",
-          "fields": [
-            {
-              "name": "expiration",
-              "type": "long",
-              "doc": "Unix timestamp of milliseconds since Epoch of Jan 1. 1970 - Timestamp denotes when this delayed alarm should expire"
-            }
-          ]
-        },
+        "OffDelayedOverride",
         {
           "type": "record",
           "name": "ShelvedAlarm",
