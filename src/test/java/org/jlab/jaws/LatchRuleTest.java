@@ -74,15 +74,15 @@ public class LatchRuleTest {
         active2.setMsg(new SimpleAlarming());
 
         mono1 = new Alarm();
-        mono1.setActive(active1);
+        mono1.setActivation(active1);
         mono1.setClass$(class1);
-        mono1.setRegistered(registered1);
-        mono1.setEffectiveRegistered(MonologRule.computeEffectiveRegistration(registered1, class1));
+        mono1.setRegistration(registered1);
+        mono1.setEffectiveRegistration(MonologRule.computeEffectiveRegistration(registered1, class1));
         mono1.setOverrides(new OverrideSet());
         mono1.setTransitions(new TransitionSet());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
-        mono1.setEffectiveState(AlarmState.Normal);
+        mono1.setState(AlarmState.Normal);
     }
 
     @After
@@ -92,7 +92,7 @@ public class LatchRuleTest {
 
     @Test
     public void notLatching() {
-        mono1.getEffectiveRegistered().setLatching(false);
+        mono1.getEffectiveRegistration().setLatching(false);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
@@ -104,7 +104,7 @@ public class LatchRuleTest {
 
     @Test
     public void latching() {
-        mono1.getEffectiveRegistered().setLatching(true);
+        mono1.getEffectiveRegistration().setLatching(true);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);

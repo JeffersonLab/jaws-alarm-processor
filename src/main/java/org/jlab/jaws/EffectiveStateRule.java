@@ -107,7 +107,7 @@ public class EffectiveStateRule extends ProcessingRule {
                     // Should we have an Unregistered state or always default to Normal?
                     AlarmState state = AlarmState.Normal;
 
-                    if(value.getActive() != null) {
+                    if(value.getActivation() != null) {
                         state = AlarmState.Active;
                     }
 
@@ -117,7 +117,7 @@ public class EffectiveStateRule extends ProcessingRule {
 
                     if(value.getTransitions().getLatching() ||
                             value.getOverrides().getLatched() != null) {
-                        if(value.getActive() != null) {
+                        if(value.getActivation() != null) {
                             state = AlarmState.Latched;
                         } else {
                             state = AlarmState.NormalLatched;
@@ -134,7 +134,7 @@ public class EffectiveStateRule extends ProcessingRule {
                         if(value.getOverrides().getShelved().getOneshot()) {
                             state = AlarmState.OneShotShelved;
                         } else {
-                            if(value.getActive() != null) {
+                            if(value.getActivation() != null) {
                                 state = AlarmState.ContinuousShelved;
                             } else {
                                 state = AlarmState.NormalContinuousShelved;
@@ -147,7 +147,7 @@ public class EffectiveStateRule extends ProcessingRule {
                     }
 
                     if(value.getOverrides().getFiltered() != null) {
-                        if(value.getActive() != null) {
+                        if(value.getActivation() != null) {
                             state = AlarmState.Filtered;
                         } else {
                             state = AlarmState.NormalFiltered;
@@ -155,14 +155,14 @@ public class EffectiveStateRule extends ProcessingRule {
                     }
 
                     if(value.getOverrides().getDisabled() != null) {
-                        if(value.getActive() != null) {
+                        if(value.getActivation() != null) {
                             state = AlarmState.Disabled;
                         } else {
                             state = AlarmState.NormalDisabled;
                         }
                     }
 
-                    value.setEffectiveState(state);
+                    value.setState(state);
 
                     return new KeyValue<>(key, value);
                 }

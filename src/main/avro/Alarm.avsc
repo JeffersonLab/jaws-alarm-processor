@@ -4,7 +4,7 @@
   "namespace": "org.jlab.jaws.entity",
   "fields": [
     {
-      "name": "registered",
+      "name": "registration",
       "type": [
         "null",
         "RegisteredAlarm"
@@ -20,7 +20,7 @@
       "doc": "The alarm class"
     },
     {
-      "name": "effectiveRegistered",
+      "name": "effectiveRegistration",
       "type": [
         "null",
         "RegisteredAlarm"
@@ -28,7 +28,7 @@
       "doc": "The effective alarm registration accounting for alarm class defaults"
     },
     {
-      "name": "active",
+      "name": "activation",
       "type": [
         "null",
         "ActiveAlarm"
@@ -46,7 +46,7 @@
       "doc": "override transition states"
     },
     {
-      "name": "effectiveState",
+      "name": "state",
       "type": "AlarmState",
       "doc": "The computed effective state given active and override state"
     }

@@ -67,15 +67,15 @@ public class OneShotRuleTest {
         active2.setMsg(new SimpleAlarming());
 
         mono1 = new Alarm();
-        mono1.setActive(active1);
+        mono1.setActivation(active1);
         mono1.setClass$(class1);
-        mono1.setRegistered(registered1);
-        mono1.setEffectiveRegistered(MonologRule.computeEffectiveRegistration(registered1, class1));
+        mono1.setRegistration(registered1);
+        mono1.setEffectiveRegistration(MonologRule.computeEffectiveRegistration(registered1, class1));
         mono1.setOverrides(new OverrideSet());
         mono1.setTransitions(new TransitionSet());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
-        mono1.setEffectiveState(AlarmState.Normal);
+        mono1.setState(AlarmState.Normal);
     }
 
     @After

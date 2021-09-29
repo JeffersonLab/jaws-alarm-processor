@@ -75,7 +75,7 @@ public class LatchRule extends ProcessingRule {
             @Override
             public boolean test(String key, Alarm value) {
                 //System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching() && value.getTransitions().getTransitionToActive();
+                return value.getEffectiveRegistration() != null && value.getEffectiveRegistration().getLatching() && value.getTransitions().getTransitionToActive();
             }
         });
 
@@ -145,7 +145,7 @@ public class LatchRule extends ProcessingRule {
                     //System.err.println("Processing key = " + key + ", value = " + value);
 
                     // Skip the filter unless latching is registered
-                    if(value.getEffectiveRegistered() != null && value.getEffectiveRegistered().getLatching()) {
+                    if(value.getEffectiveRegistration() != null && value.getEffectiveRegistration().getLatching()) {
 
                         // Check if already latching in-progress
                         boolean latching = store.get(key) != null;

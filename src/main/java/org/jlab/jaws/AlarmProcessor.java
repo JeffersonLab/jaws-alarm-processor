@@ -8,8 +8,8 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 
-public class AutoOverrideProcessor {
-    private static final Logger log = LoggerFactory.getLogger(AutoOverrideProcessor.class);
+public class AlarmProcessor {
+    private static final Logger log = LoggerFactory.getLogger(AlarmProcessor.class);
     private static final Set<ProcessingRule> rules = new HashSet<>();
 
     /**

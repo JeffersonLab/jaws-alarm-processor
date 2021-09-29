@@ -96,7 +96,7 @@ public class MonologRule extends ProcessingRule {
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
-                        System.err.println("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
+                        System.err.println("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
                 });
@@ -106,7 +106,7 @@ public class MonologRule extends ProcessingRule {
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
-                        System.err.println("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
+                        System.err.println("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
                 });
@@ -124,7 +124,7 @@ public class MonologRule extends ProcessingRule {
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
-                        System.err.println("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistered() + ", \n\tactive: " + value.getActive());
+                        System.err.println("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
                 });
@@ -186,13 +186,13 @@ public class MonologRule extends ProcessingRule {
             RegisteredAlarm effectiveRegistered = computeEffectiveRegistration(registered, clazz);
 
             return Alarm.newBuilder()
-                    .setRegistered(registered)
+                    .setRegistration(registered)
                     .setClass$(clazz)
-                    .setEffectiveRegistered(effectiveRegistered)
-                    .setActive(null)
+                    .setEffectiveRegistration(effectiveRegistered)
+                    .setActivation(null)
                     .setOverrides(new OverrideSet())
                     .setTransitions(new TransitionSet())
-                    .setEffectiveState(AlarmState.Normal)
+                    .setState(AlarmState.Normal)
                     .build();
         }
     }
@@ -206,16 +206,16 @@ public class MonologRule extends ProcessingRule {
             Alarm result;
 
             if(registered != null) {
-                result = Alarm.newBuilder(registered).setActive(active).build();
+                result = Alarm.newBuilder(registered).setActivation(active).build();
             } else {
                 result = Alarm.newBuilder()
-                        .setRegistered(null)
+                        .setRegistration(null)
                         .setClass$(null)
-                        .setEffectiveRegistered(null)
+                        .setEffectiveRegistration(null)
                         .setOverrides(new OverrideSet())
                         .setTransitions(new TransitionSet())
-                        .setEffectiveState(AlarmState.Normal)
-                        .setActive(active).build();
+                        .setState(AlarmState.Normal)
+                        .setActivation(active).build();
             }
 
             return result;
@@ -337,7 +337,7 @@ public class MonologRule extends ProcessingRule {
                     boolean transitionToNormal = false;
 
                     if(value != null) {
-                        next = value.getActive();
+                        next = value.getActivation();
                     }
 
                     if (previous == null && next != null) {
