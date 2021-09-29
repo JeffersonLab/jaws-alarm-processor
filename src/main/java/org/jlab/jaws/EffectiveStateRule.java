@@ -22,25 +22,21 @@ import java.util.Properties;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 /**
- * Removes Shelved override when alarm is no longer active for overrides configured as one-shot.
+ * Compute effective state given active and overridden state.
  */
-public class OneShotRule extends ProcessingRule {
+public class EffectiveStateRule extends ProcessingRule {
 
-    private static final Logger log = LoggerFactory.getLogger(OneShotRule.class);
+    private static final Logger log = LoggerFactory.getLogger(EffectiveStateRule.class);
 
-    public static final String OUTPUT_TOPIC_PASSTHROUGH = "oneshot-processed";
-    public static final String OUTPUT_TOPIC_OVERRIDE = "overridden-alarms";
+    public static final String OUTPUT_TOPIC = "jaws-alarms";
 
-    public static final String INPUT_TOPIC = "latch-processed";
+    public static final String INPUT_TOPIC = "unshelve-processed";
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<MonologValue> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
-
-    public static final Serdes.StringSerde ONESHOT_STORE_KEY_SERDE = new Serdes.StringSerde();
-    public static final Serdes.StringSerde ONESHOT_STORE_VALUE_SERDE = new Serdes.StringSerde();
 
     @Override
     public Properties constructProperties() {
@@ -61,47 +57,17 @@ public class OneShotRule extends ProcessingRule {
 
         MONOLOG_VALUE_SERDE.configure(config, false);
 
-        OVERRIDE_KEY_SERDE.configure(config, true);
-        OVERRIDE_VALUE_SERDE.configure(config, false);
-
         final KTable<String, MonologValue> monologTable = builder.table(INPUT_TOPIC,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         final KStream<String, MonologValue> monologStream = monologTable.toStream();
 
-        KStream<String, MonologValue> oneshotOverrideMonolog = monologStream.filter(new Predicate<String, MonologValue>() {
-            @Override
-            public boolean test(String key, MonologValue value) {
-                System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
-            }
-        });
 
-        KStream<OverriddenAlarmKey, OverriddenAlarmValue> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, MonologValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
-            @Override
-            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, MonologValue value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Shelved), null);
-            }
-        });
+        final KStream<String, MonologValue> output = monologStream.transform(
+                new EffectiveStateRule.MsgTransformerFactory(),
+                Named.as("EffectiveStateTransitionProcessor"));
 
-        oneshotOverrides.to(OUTPUT_TOPIC_OVERRIDE, Produced.as("Oneshot-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
-
-
-
-        final StoreBuilder<KeyValueStore<String, String>> storeBuilder = Stores.keyValueStoreBuilder(
-                Stores.persistentKeyValueStore("OneShotStateStore"),
-                ONESHOT_STORE_KEY_SERDE,
-                ONESHOT_STORE_VALUE_SERDE
-        ).withCachingEnabled();
-
-        builder.addStateStore(storeBuilder);
-
-        final KStream<String, MonologValue> passthrough = monologStream.transform(
-                new OneShotRule.MsgTransformerFactory(storeBuilder.name()),
-                Named.as("OneShotTransitionProcessor"),
-                storeBuilder.name());
-
-        passthrough.to(OUTPUT_TOPIC_PASSTHROUGH, Produced.as("Oneshot-Passthrough")
+        output.to(OUTPUT_TOPIC, Produced.as("EFFECTIVE-STAT-OUTPUT")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
@@ -109,15 +75,11 @@ public class OneShotRule extends ProcessingRule {
 
     private static final class MsgTransformerFactory implements TransformerSupplier<String, MonologValue, KeyValue<String, MonologValue>> {
 
-        private final String storeName;
-
         /**
          * Create a new MsgTransformerFactory.
-         *
-         * @param storeName The state store name
          */
-        public MsgTransformerFactory(String storeName) {
-            this.storeName = storeName;
+        public MsgTransformerFactory() {
+
         }
 
         /**
@@ -128,41 +90,79 @@ public class OneShotRule extends ProcessingRule {
         @Override
         public Transformer<String, MonologValue, KeyValue<String, MonologValue>> get() {
             return new Transformer<String, MonologValue, KeyValue<String, MonologValue>>() {
-                private KeyValueStore<String, String> store;
                 private ProcessorContext context;
 
                 @Override
                 @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
                 public void init(ProcessorContext context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, String>) context.getStateStore(storeName);
                 }
 
                 @Override
                 public KeyValue<String, MonologValue> transform(String key, MonologValue value) {
                     System.err.println("Processing key = " + key + ", value = " + value);
 
-                    boolean unshelving = false;
+                    // Note: criteria are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
-                    // Skip the filter unless oneshot is set
-                    if(value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot()) {
+                    // Should we have an Unregistered state or always default to Normal?
+                    AlarmState state = AlarmState.Normal;
 
-                        // Check if already unshelving in-progress
-                        unshelving = store.get(key) != null;
+                    if(value.getActive() != null) {
+                        state = AlarmState.Active;
+                    }
 
-                        // Check if we need to unshelve
-                        boolean needToUnshelve = value.getTransitions().getTransitionToNormal();
+                    if(value.getOverrides().getOffdelay() != null) {
+                        state = AlarmState.OffDelayed;
+                    }
 
-                        if (needToUnshelve) {
-                            unshelving = true;
+                    if(value.getTransitions().getLatching() ||
+                            value.getOverrides().getLatched() != null) {
+                        if(value.getActive() != null) {
+                            state = AlarmState.Latched;
+                        } else {
+                            state = AlarmState.NormalLatched;
                         }
                     }
 
-                    store.put(key, unshelving ? "y" : null);
-
-                    if (unshelving) { // Update transition state
-                        value.getTransitions().setUnshelving(true);
+                    if(value.getOverrides().getOndelay() != null) {
+                        state = AlarmState.OnDelayed;
                     }
+
+                    if(value.getOverrides().getShelved() != null &&
+                            !value.getTransitions().getUnshelving()) {
+
+                        if(value.getOverrides().getShelved().getOneshot()) {
+                            state = AlarmState.OneShotShelved;
+                        } else {
+                            if(value.getActive() != null) {
+                                state = AlarmState.ContinuousShelved;
+                            } else {
+                                state = AlarmState.NormalContinuousShelved;
+                            }
+                        }
+                    }
+
+                    if(value.getOverrides().getMasked() != null) {
+                        state = AlarmState.Masked;
+                    }
+
+                    if(value.getOverrides().getFiltered() != null) {
+                        if(value.getActive() != null) {
+                            state = AlarmState.Filtered;
+                        } else {
+                            state = AlarmState.NormalFiltered;
+                        }
+                    }
+
+                    if(value.getOverrides().getDisabled() != null) {
+                        if(value.getActive() != null) {
+                            state = AlarmState.Disabled;
+                        } else {
+                            state = AlarmState.NormalDisabled;
+                        }
+                    }
+
+                    value.setEffectiveState(state);
 
                     return new KeyValue<>(key, value);
                 }

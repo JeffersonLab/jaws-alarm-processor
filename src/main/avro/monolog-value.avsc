@@ -44,6 +44,11 @@
       "name": "transitions",
       "type": "TransitionSet",
       "doc": "override transition states"
+    },
+    {
+      "name": "effectiveState",
+      "type": "AlarmState",
+      "doc": "The computed effective state given active and override state"
     }
   ]
 }

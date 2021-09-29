@@ -28,7 +28,7 @@ public class LatchRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(LatchRule.class);
 
-    public static final String OUTPUT_TOPIC_PASSTHROUGH = "latch-processed-monolog";
+    public static final String OUTPUT_TOPIC_PASSTHROUGH = "latch-processed";
     public static final String OUTPUT_TOPIC_OVERRIDE = "overridden-alarms";
 
     public static final String INPUT_TOPIC = "monolog";

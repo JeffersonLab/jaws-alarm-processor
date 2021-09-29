@@ -19,10 +19,12 @@ public class AutoOverrideProcessor {
      */
     public static void main(String[] args) {
 
-        rules.add(new MonologRule());
-        rules.add(new ShelveExpirationRule());
-        rules.add(new LatchRule());
-        rules.add(new OneShotRule());
+        rules.add(new ShelveExpirationRule()); // async produce to overridden-alarms
+
+        rules.add(new MonologRule()); // produce to 'monolog' topic
+        rules.add(new LatchRule()); // monolog -> latch-processed (+ async overridden)
+        rules.add(new OneShotRule()); // latch-processed -> unshelve-processed (+ async overridden)
+        rules.add(new EffectiveStateRule()); // unshelve-processed -> jaws-alarms
 
         final CountDownLatch latch = new CountDownLatch(1);
 

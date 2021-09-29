@@ -112,7 +112,7 @@ public class MonologRuleTest {
         KeyValue<String, MonologValue> result2 = results.get(2);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new OverrideSet(), new TransitionSet()), result2.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, new OverrideSet(), new TransitionSet(), AlarmState.Normal), result2.value);
     }
 
     @Test
@@ -153,7 +153,7 @@ public class MonologRuleTest {
                 .build();
 
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, new TransitionSet()), result.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, new TransitionSet(), AlarmState.Normal), result.value);
     }
 
     @Test
@@ -195,16 +195,16 @@ public class MonologRuleTest {
 
         TransitionSet transitions = TransitionSet.newBuilder().build();
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, transitions), result0.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, transitions, AlarmState.Normal), result0.value);
 
         TransitionSet transitions2 = TransitionSet.newBuilder().setTransitionToActive(true).build();
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions2), result1.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result1.value);
 
         TransitionSet transitions3 = TransitionSet.newBuilder().setTransitionToNormal(true).build();
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, transitions3), result2.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, null, overrides, transitions3, AlarmState.Normal), result2.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions2), result3.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result3.value);
 
-        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions), result4.value);
+        Assert.assertEquals(new MonologValue(registered1, class1, effectiveRegistered1, active1, overrides, transitions, AlarmState.Normal), result4.value);
     }
 }

@@ -82,6 +82,7 @@ public class LatchRuleTest {
         mono1.setTransitions(new TransitionSet());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
+        mono1.setEffectiveState(AlarmState.Normal);
     }
 
     @After
