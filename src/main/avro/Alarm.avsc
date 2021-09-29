@@ -15,7 +15,7 @@
       "name": "class",
       "type": [
         "null",
-        "RegisteredClass"
+        "AlarmClass"
       ],
       "doc": "The alarm class"
     },

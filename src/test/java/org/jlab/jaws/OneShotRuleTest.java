@@ -19,7 +19,7 @@ public class OneShotRuleTest {
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputOverrideTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
-    private RegisteredClass class1;
+    private AlarmClass class1;
     private AlarmActivation active1;
     private AlarmActivation active2;
     private Alarm mono1;
@@ -49,7 +49,7 @@ public class OneShotRuleTest {
         registered2.setProducer(new SimpleProducer());
         registered2.setLatching(false);
 
-        class1 = new RegisteredClass();
+        class1 = new AlarmClass();
         class1.setLatching(true);
         class1.setCategory(AlarmCategory.CAMAC);
         class1.setFilterable(true);

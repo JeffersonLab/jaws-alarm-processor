@@ -38,7 +38,7 @@ public class MonologRule extends ProcessingRule {
     public static final Serdes.StringSerde INPUT_KEY_ACTIVE_SERDE = new Serdes.StringSerde();
 
     public static final SpecificAvroSerde<AlarmRegistration> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<RegisteredClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmActivation> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
@@ -84,7 +84,7 @@ public class MonologRule extends ProcessingRule {
         MONOLOG_VALUE_SERDE.configure(config, false);
         OVERRIDE_LIST_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, RegisteredClass> classesTable = builder.table(inputTopicClasses,
+        final KTable<String, AlarmClass> classesTable = builder.table(inputTopicClasses,
                 Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
         final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicRegistered,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
@@ -92,7 +92,7 @@ public class MonologRule extends ProcessingRule {
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
         KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
-                AlarmRegistration::getClass$, new RegisteredClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
+                AlarmRegistration::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
@@ -151,7 +151,7 @@ public class MonologRule extends ProcessingRule {
         return builder.build();
     }
 
-    public static AlarmRegistration computeEffectiveRegistration(AlarmRegistration registered, RegisteredClass clazz) {
+    public static AlarmRegistration computeEffectiveRegistration(AlarmRegistration registered, AlarmClass clazz) {
         AlarmRegistration effectiveRegistered = AlarmRegistration.newBuilder(registered).build();
         if(clazz != null) {
             if (effectiveRegistered.getCategory() == null) effectiveRegistered.setCategory(clazz.getCategory());
@@ -177,9 +177,9 @@ public class MonologRule extends ProcessingRule {
         return effectiveRegistered;
     }
 
-    private final class RegisteredClassJoiner implements ValueJoiner<AlarmRegistration, RegisteredClass, Alarm> {
+    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, Alarm> {
 
-        public Alarm apply(AlarmRegistration registered, RegisteredClass clazz) {
+        public Alarm apply(AlarmRegistration registered, AlarmClass clazz) {
 
             //System.err.println("class joiner: " + registered);
 

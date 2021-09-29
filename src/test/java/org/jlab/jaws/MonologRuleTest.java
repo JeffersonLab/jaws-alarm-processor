@@ -18,13 +18,13 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class MonologRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
-    private TestInputTopic<String, RegisteredClass> inputTopicClasses;
+    private TestInputTopic<String, AlarmClass> inputTopicClasses;
     private TestInputTopic<String, AlarmActivation> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
     private TestOutputTopic<String, Alarm> outputTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
-    private RegisteredClass class1;
+    private AlarmClass class1;
     private AlarmRegistration effectiveRegistered1;
     private AlarmActivation active1;
     private AlarmActivation active2;
@@ -56,7 +56,7 @@ public class MonologRuleTest {
         registered2.setProducer(new SimpleProducer());
         registered2.setLatching(false);
 
-        class1 = new RegisteredClass();
+        class1 = new AlarmClass();
         class1.setLatching(true);
         class1.setCategory(AlarmCategory.CAMAC);
         class1.setFilterable(true);

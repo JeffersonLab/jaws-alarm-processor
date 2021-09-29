@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "RegisteredClass",
+  "name": "AlarmClass",
   "doc": "An alarm class",
   "namespace": "org.jlab.jaws.entity",
   "fields": [
