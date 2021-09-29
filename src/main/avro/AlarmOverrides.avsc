@@ -11,7 +11,7 @@
       "doc": "A disabled override"
     },
     {
-      "type": ["null", "FilteredAlarm"],
+      "type": ["null", "FilteredOverride"],
       "default": null,
       "name": "filtered",
       "doc": "A filtered override"

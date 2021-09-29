@@ -245,7 +245,7 @@ public class MonologRule extends ProcessingRule {
                     }
 
                     if(over.getMsg() instanceof FilteredAlarm) {
-                        overrides.setFiltered((FilteredAlarm) over.getMsg());
+                        overrides.setFiltered((FilteredOverride) over.getMsg());
                     }
                 }
             }

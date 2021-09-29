@@ -8,18 +8,7 @@
       "name": "msg",
       "type": [
         "DisabledOverride",
-        {
-          "type": "record",
-          "name": "FilteredAlarm",
-          "doc": "A filtered alarm message value",
-          "fields": [
-            {
-              "name": "filtername",
-              "type": "string",
-              "doc": "The name of the filter suppressing this alarm"
-            }
-          ]
-        },
+        "FilteredOverride",
         {
           "type": "record",
           "name": "LatchedAlarm",

@@ -1,8 +1,8 @@
 {
   "type": "record",
-  "name": "FilteredAlarm",
+  "name": "FilteredOverride",
   "namespace": "org.jlab.jaws.entity",
-  "doc": "A filtered alarm message value",
+  "doc": "A filtered override",
   "fields": [
     {
       "name": "filtername",
