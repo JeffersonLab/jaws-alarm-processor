@@ -20,13 +20,37 @@
       "name": "latching",
       "type": "boolean",
       "default": false,
-      "doc": "true when record is in-process of latching, LatchAlarm record forthcoming"
+      "doc": "true when record is in-process of latching, LatchOverride forthcoming"
     },
     {
       "name": "unshelving",
       "type": "boolean",
       "default": false,
-      "doc": "true when record is in-process of being unshelved after one-shot, ShelvedAlarm record clearing"
+      "doc": "true when record is in-process of being unshelved after one-shot, ShelvedOverride clearing"
+    },
+    {
+      "name": "masking",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is in-process of being masked, MaskedOverride forthcoming"
+    },
+    {
+      "name": "unmasking",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is in-process of being unmasked, MaskedOverride clearing"
+    },
+    {
+      "name": "ondelaying",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is in-process of being on-delayed, OnDelayedOverride forthcoming"
+    },
+    {
+      "name": "offdelaying",
+      "type": "boolean",
+      "default": false,
+      "doc": "true when record is in-process of being off-delayed, OffDelayedOverride forthcoming"
     }
   ]
 }
