@@ -67,7 +67,7 @@ public class EffectiveStateRule extends ProcessingRule {
                 new EffectiveStateRule.MsgTransformerFactory(),
                 Named.as("EffectiveStateTransitionProcessor"));
 
-        output.to(outputTopic, Produced.as("EFFECTIVE-STAT-OUTPUT")
+        output.to(outputTopic, Produced.as("EFFECTIVE-STATE-OUTPUT")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
