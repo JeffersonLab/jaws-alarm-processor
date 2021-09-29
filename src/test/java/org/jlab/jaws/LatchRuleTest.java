@@ -21,8 +21,8 @@ public class LatchRuleTest {
     private TestInputTopic<String, Alarm> inputTopicMonolog;
     private TestOutputTopic<String, Alarm> outputPassthroughTopic;
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputOverrideTopic;
-    private RegisteredAlarm registered1;
-    private RegisteredAlarm registered2;
+    private AlarmRegistration registered1;
+    private AlarmRegistration registered2;
     private RegisteredClass class1;
     private AlarmActivation active1;
     private AlarmActivation active2;
@@ -45,8 +45,8 @@ public class LatchRuleTest {
         outputPassthroughTopic = testDriver.createOutputTopic(rule.outputTopic, LatchRule.MONOLOG_KEY_SERDE.deserializer(), LatchRule.MONOLOG_VALUE_SERDE.deserializer());
         outputOverrideTopic = testDriver.createOutputTopic(rule.overridesOutputTopic, LatchRule.OVERRIDE_KEY_SERDE.deserializer(), LatchRule.OVERRIDE_VALUE_SERDE.deserializer());
 
-        registered1 = new RegisteredAlarm();
-        registered2 = new RegisteredAlarm();
+        registered1 = new AlarmRegistration();
+        registered2 = new AlarmRegistration();
 
         registered1.setClass$("base");
         registered1.setProducer(new SimpleProducer());

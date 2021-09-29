@@ -17,8 +17,8 @@ public class OneShotRuleTest {
     private TestInputTopic<String, Alarm> inputTopicMonolog;
     private TestOutputTopic<String, Alarm> outputPassthroughTopic;
     private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputOverrideTopic;
-    private RegisteredAlarm registered1;
-    private RegisteredAlarm registered2;
+    private AlarmRegistration registered1;
+    private AlarmRegistration registered2;
     private RegisteredClass class1;
     private AlarmActivation active1;
     private AlarmActivation active2;
@@ -38,8 +38,8 @@ public class OneShotRuleTest {
         outputPassthroughTopic = testDriver.createOutputTopic(rule.outputTopic, OneShotRule.MONOLOG_KEY_SERDE.deserializer(), OneShotRule.MONOLOG_VALUE_SERDE.deserializer());
         outputOverrideTopic = testDriver.createOutputTopic(rule.overridesOutputTopic, OneShotRule.OVERRIDE_KEY_SERDE.deserializer(), OneShotRule.OVERRIDE_VALUE_SERDE.deserializer());
 
-        registered1 = new RegisteredAlarm();
-        registered2 = new RegisteredAlarm();
+        registered1 = new AlarmRegistration();
+        registered2 = new AlarmRegistration();
 
         registered1.setClass$("base");
         registered1.setProducer(new SimpleProducer());

@@ -7,7 +7,7 @@
       "name": "registration",
       "type": [
         "null",
-        "RegisteredAlarm"
+        "AlarmRegistration"
       ],
       "doc": "The alarm registration"
     },
@@ -23,7 +23,7 @@
       "name": "effectiveRegistration",
       "type": [
         "null",
-        "RegisteredAlarm"
+        "AlarmRegistration"
       ],
       "doc": "The effective alarm registration accounting for alarm class defaults"
     },

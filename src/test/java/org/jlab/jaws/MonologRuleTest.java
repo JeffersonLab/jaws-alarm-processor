@@ -17,15 +17,15 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class MonologRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, RegisteredAlarm> inputTopicRegistered;
+    private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
     private TestInputTopic<String, RegisteredClass> inputTopicClasses;
     private TestInputTopic<String, AlarmActivation> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
     private TestOutputTopic<String, Alarm> outputTopic;
-    private RegisteredAlarm registered1;
-    private RegisteredAlarm registered2;
+    private AlarmRegistration registered1;
+    private AlarmRegistration registered2;
     private RegisteredClass class1;
-    private RegisteredAlarm effectiveRegistered1;
+    private AlarmRegistration effectiveRegistered1;
     private AlarmActivation active1;
     private AlarmActivation active2;
 
@@ -45,8 +45,8 @@ public class MonologRuleTest {
         inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(rule.outputTopic, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
 
-        registered1 = new RegisteredAlarm();
-        registered2 = new RegisteredAlarm();
+        registered1 = new AlarmRegistration();
+        registered2 = new AlarmRegistration();
 
         registered1.setClass$("base");
         registered1.setProducer(new SimpleProducer());

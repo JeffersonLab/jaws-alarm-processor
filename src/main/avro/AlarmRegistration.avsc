@@ -1,6 +1,6 @@
 {
   "type": "record",
-  "name": "RegisteredAlarm",
+  "name": "AlarmRegistration",
   "doc": "Master alarm database record",
   "namespace": "org.jlab.jaws.entity",
   "fields": [
