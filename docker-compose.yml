@@ -45,9 +45,9 @@ services:
       BOOTSTRAP_SERVERS: "kafka:9092"
       SCHEMA_REGISTRY: "http://registry:8081"
 
-  auto:
-    hostname: auto
-    container_name: auto
+  alarms:
+    hostname: alarms
+    container_name: alarms
     depends_on:
       - zookeeper
       - kafka

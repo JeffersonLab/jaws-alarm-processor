@@ -2,5 +2,5 @@
 version: '3.8'
 
 services:
-  auto:
+  alarms:
     image: slominskir/jaws-auto-override-processor:1.4.0
