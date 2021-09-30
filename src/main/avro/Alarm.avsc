@@ -9,6 +9,7 @@
         "null",
         "AlarmRegistration"
       ],
+      "default": null,
       "doc": "The alarm registration"
     },
     {
@@ -17,6 +18,7 @@
         "null",
         "AlarmClass"
       ],
+      "default": null,
       "doc": "The alarm class"
     },
     {
@@ -25,6 +27,7 @@
         "null",
         "AlarmRegistration"
       ],
+      "default": null,
       "doc": "The effective alarm registration accounting for alarm class defaults"
     },
     {
@@ -33,6 +36,7 @@
         "null",
         "AlarmActivation"
       ],
+      "default": null,
       "doc": "The alarm activation"
     },
     {

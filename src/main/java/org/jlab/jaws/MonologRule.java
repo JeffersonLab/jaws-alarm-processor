@@ -250,9 +250,22 @@ public class MonologRule extends ProcessingRule {
                 }
             }
 
-            registeredAndActive.setOverrides(overrides);
+            Alarm result;
 
-            return Alarm.newBuilder(registeredAndActive).build();
+            if(registeredAndActive != null) {
+                result = Alarm.newBuilder(registeredAndActive).setOverrides(overrides).build();
+            } else {
+                result = Alarm.newBuilder()
+                        .setRegistration(null)
+                        .setClass$(null)
+                        .setEffectiveRegistration(null)
+                        .setOverrides(overrides)
+                        .setTransitions(new ProcessorTransitions())
+                        .setState(AlarmState.Normal)
+                        .build();
+            }
+
+            return result;
         }
     }
 

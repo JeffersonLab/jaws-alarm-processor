@@ -86,6 +86,17 @@ public class MonologRuleTest {
     }
 
     @Test
+    public void noRegistrationOrActiveButOverride() {
+        OverriddenAlarmValue overriddenAlarmValue1 = new OverriddenAlarmValue();
+        LatchedOverride latchedOverride = new LatchedOverride();
+        overriddenAlarmValue1.setMsg(latchedOverride);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), overriddenAlarmValue1);
+
+        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        Assert.assertEquals(1, results.size());
+    }
+
+    @Test
     public void count() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
