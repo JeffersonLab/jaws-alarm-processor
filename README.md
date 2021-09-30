@@ -1,7 +1,7 @@
 # jaws-alarm-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-alarm-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-alarm-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-alarm-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-alarm-processor)
 A set of connected [Kafka Streams](https://kafka.apache.org/documentation/streams/) apps for [JAWS](https://github.com/JeffersonLab/jaws) that process automated overrides and effective state.  
 
-The normalized JAWS topics are joined to create an unnormalized series of pipelined topics with all relevant alarm data consolidated into a single record per alarm key and stricter alarm state ordering guarentees.
+The normalized JAWS topics are joined to create an unnormalized series of pipelined topics with all relevant alarm data consolidated into a single record per alarm key and stricter alarm state ordering guarantees.
 
 Automated overrides include:
 - **shelve expiration** - Remove Shelved override with an expiration timer
