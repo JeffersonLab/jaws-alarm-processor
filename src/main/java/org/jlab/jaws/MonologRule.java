@@ -61,7 +61,7 @@ public class MonologRule extends ProcessingRule {
     public Properties constructProperties() {
         final Properties props = super.constructProperties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-auto-override-processor-latch");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor-monolog");
 
         return props;
     }
