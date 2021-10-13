@@ -177,6 +177,7 @@ public class MonologRuleTest {
         KeyValue<String, Alarm> result = results.get(5);
 
         AlarmOverrideSet overrides = AlarmOverrideSet.newBuilder()
+                .setLatched(new LatchedOverride())
                 .build();
 
         Assert.assertEquals("alarm1", result.key);
