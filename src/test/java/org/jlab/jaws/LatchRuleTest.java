@@ -99,6 +99,18 @@ public class LatchRuleTest {
     }
 
     @Test
+    public void isLatchingIsNull() {
+        mono1.getEffectiveRegistration().setLatching(null);
+
+        inputTopicMonolog.pipeInput("alarm1", mono1);
+        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+
+        Assert.assertEquals(1, passthroughResults.size());
+        Assert.assertEquals(0, overrideResults.size());
+    }
+
+    @Test
     public void latching() {
         mono1.getEffectiveRegistration().setLatching(true);
 
