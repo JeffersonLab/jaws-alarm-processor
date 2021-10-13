@@ -100,7 +100,7 @@ public class EffectiveStateRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    log.debug("Processing key = " + key + ", value = " + value);
+                    log.debug("Processing key = {}, value = \n\tReg: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getEffectiveRegistration(),value.getActivation(),value.getOverrides(),value.getTransitions());
 
                     // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
