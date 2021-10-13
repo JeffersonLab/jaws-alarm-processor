@@ -106,6 +106,22 @@ public class MonologRuleTest {
     }
 
     @Test
+    public void unsetActiveWithNoRegistration() {
+        inputTopicActive.pipeInput("alarm1", active1);
+        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
+        inputTopicActive.pipeInput("alarm1", null);
+        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+
+        System.err.println("\n\n\n");
+        for(KeyValue<String, Alarm> result: results) {
+            System.err.println(result);
+        }
+
+        Assert.assertEquals(2, results.size());
+        Assert.assertNotNull(results.get(1).value);
+    }
+
+    @Test
     public void content() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));

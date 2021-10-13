@@ -137,6 +137,7 @@ public class MonologRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
+        // Ensure we always return non-null Alarm record and populate it with transition state
         final KStream<String, Alarm> withTransitionState = plusOverrides.toStream()
                 .transform(new MonologRule.MsgTransformerFactory(storeBuilder.name()),
                         Named.as("ActiveTransitionStateProcessor"),
@@ -349,9 +350,21 @@ public class MonologRule extends ProcessingRule {
                     boolean transitionToActive = false;
                     boolean transitionToNormal = false;
 
-                    if(value != null) {
-                        next = value.getActivation();
+                    // Handle Scenario where only one of Registration or Activation and it just got tombstoned!
+                    // Instead of forwarding Alarm = null we always forward non-null alarm,
+                    // but fields inside may be null
+                    if(value == null) {
+                        value = Alarm.newBuilder()
+                                .setRegistration(null)
+                                .setClass$(null)
+                                .setEffectiveRegistration(null)
+                                .setOverrides(new AlarmOverrideSet())
+                                .setTransitions(new ProcessorTransitions())
+                                .setState(AlarmState.Normal)
+                                .setActivation(null).build();
                     }
+
+                    next = value.getActivation();
 
                     if (previous == null && next != null) {
                         //System.err.println("TRANSITION TO ACTIVE!");
@@ -363,10 +376,8 @@ public class MonologRule extends ProcessingRule {
 
                     store.put(key, next);
 
-                    if(value != null) {
-                        value.getTransitions().setTransitionToActive(transitionToActive);
-                        value.getTransitions().setTransitionToNormal(transitionToNormal);
-                    }
+                    value.getTransitions().setTransitionToActive(transitionToActive);
+                    value.getTransitions().setTransitionToNormal(transitionToNormal);
 
                     log.trace("Transformed: {}={}", key, value);
 
