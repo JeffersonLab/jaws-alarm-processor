@@ -34,7 +34,7 @@ public class OneShotRule extends ProcessingRule {
     public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde ONESHOT_STORE_KEY_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde ONESHOT_STORE_VALUE_SERDE = new Serdes.StringSerde();
@@ -79,9 +79,9 @@ public class OneShotRule extends ProcessingRule {
             }
         });
 
-        KStream<OverriddenAlarmKey, OverriddenAlarmValue> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+        KStream<OverriddenAlarmKey, AlarmOverrideUnion> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, Alarm value) {
+            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, Alarm value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Shelved), null);
             }
         });

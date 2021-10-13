@@ -10,8 +10,8 @@ import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.kstream.TransformerSupplier;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.jlab.jaws.entity.Alarm;
+import org.jlab.jaws.entity.AlarmOverrideUnion;
 import org.jlab.jaws.entity.OverriddenAlarmKey;
-import org.jlab.jaws.entity.OverriddenAlarmValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +91,7 @@ public abstract class ProcessingRule {
         }
     }
 
-    public final class OverriddenAddHeadersFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
+    public final class OverriddenAddHeadersFactory implements TransformerSupplier<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> {
 
         /**
          * Return a new {@link Transformer} instance.
@@ -99,8 +99,8 @@ public abstract class ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> get() {
-            return new Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+        public Transformer<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> get() {
+            return new Transformer<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
                 private ProcessorContext context;
 
                 @Override
@@ -109,7 +109,7 @@ public abstract class ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> transform(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+                public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> transform(OverriddenAlarmKey key, AlarmOverrideUnion value) {
                     log.debug("Handling message: {}={}", key, value);
 
                     setHeaders(context);

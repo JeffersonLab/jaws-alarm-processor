@@ -17,8 +17,8 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class ShelveExpirationRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopic;
-    private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputTopic;
+    private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopic;
+    private TestOutputTopic<OverriddenAlarmKey, AlarmOverrideUnion> outputTopic;
     private ShelvedOverride override1;
     private ShelvedOverride override2;
 
@@ -51,30 +51,30 @@ public class ShelveExpirationRuleTest {
 
     @Test
     public void tombstoneMsg() throws InterruptedException {
-        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> keyValues = new ArrayList<>();
-        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override1)));
-        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override2)));
+        List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> keyValues = new ArrayList<>();
+        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new AlarmOverrideUnion(override1)));
+        keyValues.add(KeyValue.pair(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new AlarmOverrideUnion(override2)));
         inputTopic.pipeKeyValueList(keyValues, Instant.now(), Duration.ofSeconds(5));
         testDriver.advanceWallClockTime(Duration.ofSeconds(5));
-        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValuesToList().get(0);
+        KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertNull(result.value);
     }
 
     @Test
     public void notYetExpired() {
-        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override1));
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new AlarmOverrideUnion(override1));
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopic.pipeInput(new OverriddenAlarmKey("alarm2", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override2));
-        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValuesToList().get(0);
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm2", OverriddenAlarmType.Shelved), new AlarmOverrideUnion(override2));
+        KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> result = outputTopic.readKeyValuesToList().get(0);
         Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertNull(result.value);
     }
 
     @Test
     public void expired() {
-        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new OverriddenAlarmValue(override1));
+        inputTopic.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Shelved), new AlarmOverrideUnion(override1));
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = outputTopic.readKeyValue();
+        KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> result = outputTopic.readKeyValue();
         Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertNull(result.value);
     }

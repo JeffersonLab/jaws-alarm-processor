@@ -19,15 +19,15 @@ public class MonologRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
     private TestInputTopic<String, AlarmClass> inputTopicClasses;
-    private TestInputTopic<String, AlarmActivation> inputTopicActive;
-    private TestInputTopic<OverriddenAlarmKey, OverriddenAlarmValue> inputTopicOverridden;
+    private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
+    private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
     private TestOutputTopic<String, Alarm> outputTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
     private AlarmRegistration effectiveRegistered1;
-    private AlarmActivation active1;
-    private AlarmActivation active2;
+    private AlarmActivationUnion active1;
+    private AlarmActivationUnion active2;
 
     @Before
     public void setup() {
@@ -73,8 +73,8 @@ public class MonologRuleTest {
 
         effectiveRegistered1 = MonologRule.computeEffectiveRegistration(registered1, class1);
 
-        active1 = new AlarmActivation();
-        active2 = new AlarmActivation();
+        active1 = new AlarmActivationUnion();
+        active2 = new AlarmActivationUnion();
 
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
@@ -87,10 +87,10 @@ public class MonologRuleTest {
 
     @Test
     public void noRegistrationOrActiveButOverride() {
-        OverriddenAlarmValue overriddenAlarmValue1 = new OverriddenAlarmValue();
+        AlarmOverrideUnion AlarmOverrideUnion1 = new AlarmOverrideUnion();
         LatchedOverride latchedOverride = new LatchedOverride();
-        overriddenAlarmValue1.setMsg(latchedOverride);
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), overriddenAlarmValue1);
+        AlarmOverrideUnion1.setMsg(latchedOverride);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
 
         List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
@@ -123,7 +123,7 @@ public class MonologRuleTest {
         KeyValue<String, Alarm> result2 = results.get(2);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrides(), new ProcessorTransitions(), AlarmState.Normal), result2.value);
+        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrideSet(), new ProcessorTransitions(), AlarmState.Normal), result2.value);
     }
 
     @Test
@@ -134,16 +134,16 @@ public class MonologRuleTest {
 
         inputTopicClasses.pipeInput("base", class1);
 
-        OverriddenAlarmValue overriddenAlarmValue1 = new OverriddenAlarmValue();
+        AlarmOverrideUnion AlarmOverrideUnion1 = new AlarmOverrideUnion();
         LatchedOverride latchedOverride = new LatchedOverride();
-        overriddenAlarmValue1.setMsg(latchedOverride);
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), overriddenAlarmValue1);
+        AlarmOverrideUnion1.setMsg(latchedOverride);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
 
-        OverriddenAlarmValue overriddenAlarmValue2 = new OverriddenAlarmValue();
+        AlarmOverrideUnion AlarmOverrideUnion2 = new AlarmOverrideUnion();
         DisabledOverride disabledOverride = new DisabledOverride();
         disabledOverride.setComments("Testing");
-        overriddenAlarmValue2.setMsg(disabledOverride);
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), overriddenAlarmValue2);
+        AlarmOverrideUnion2.setMsg(disabledOverride);
+        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), AlarmOverrideUnion2);
 
 
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), null);
@@ -160,7 +160,7 @@ public class MonologRuleTest {
 
         KeyValue<String, Alarm> result = results.get(5);
 
-        AlarmOverrides overrides = AlarmOverrides.newBuilder()
+        AlarmOverrideSet overrides = AlarmOverrideSet.newBuilder()
                 .build();
 
         Assert.assertEquals("alarm1", result.key);
@@ -201,7 +201,7 @@ public class MonologRuleTest {
 
         Assert.assertEquals("alarm1", result0.key);
 
-        AlarmOverrides overrides = AlarmOverrides.newBuilder()
+        AlarmOverrideSet overrides = AlarmOverrideSet.newBuilder()
                 .build();
 
         ProcessorTransitions transitions = ProcessorTransitions.newBuilder().build();

@@ -27,9 +27,9 @@ public class ShelveExpirationRule extends ProcessingRule {
     private static final Logger log = LoggerFactory.getLogger(ShelveExpirationRule.class);
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> INPUT_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<OverriddenAlarmValue> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideUnion> INPUT_VALUE_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<OverriddenAlarmKey> OUTPUT_KEY_SERDE = INPUT_KEY_SERDE;
-    public static final SpecificAvroSerde<OverriddenAlarmValue> OUTPUT_VALUE_SERDE = INPUT_VALUE_SERDE;
+    public static final SpecificAvroSerde<AlarmOverrideUnion> OUTPUT_VALUE_SERDE = INPUT_VALUE_SERDE;
 
     /**
      * Enumerations of all channels with expiration timers, mapped to the cancellable Executor handle.
@@ -64,16 +64,16 @@ public class ShelveExpirationRule extends ProcessingRule {
         INPUT_KEY_SERDE.configure(config, true);
         INPUT_VALUE_SERDE.configure(config, false);
 
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> input = builder.stream(inputTopic, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
+        final KStream<OverriddenAlarmKey, AlarmOverrideUnion> input = builder.stream(inputTopic, Consumed.with(INPUT_KEY_SERDE, INPUT_VALUE_SERDE));
 
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> shelvedOnly = input.filter(new Predicate<OverriddenAlarmKey, OverriddenAlarmValue>() {
+        final KStream<OverriddenAlarmKey, AlarmOverrideUnion> shelvedOnly = input.filter(new Predicate<OverriddenAlarmKey, AlarmOverrideUnion>() {
             @Override
-            public boolean test(OverriddenAlarmKey key, OverriddenAlarmValue value) {
+            public boolean test(OverriddenAlarmKey key, AlarmOverrideUnion value) {
                 return key.getType() == OverriddenAlarmType.Shelved;
             }
         });
 
-        final KStream<OverriddenAlarmKey, OverriddenAlarmValue> output = shelvedOnly.transform(new MsgTransformerFactory());
+        final KStream<OverriddenAlarmKey, AlarmOverrideUnion> output = shelvedOnly.transform(new MsgTransformerFactory());
 
         output.to(outputTopic, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
@@ -84,7 +84,7 @@ public class ShelveExpirationRule extends ProcessingRule {
      * Factory to create Kafka Streams Transformer instances; references a stateStore to maintain previous
      * RegisteredAlarms.
      */
-    private final class MsgTransformerFactory implements TransformerSupplier<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> {
+    private final class MsgTransformerFactory implements TransformerSupplier<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> {
 
         /**
          * Return a new {@link Transformer} instance.
@@ -92,8 +92,8 @@ public class ShelveExpirationRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> get() {
-            return new Transformer<OverriddenAlarmKey, OverriddenAlarmValue, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+        public Transformer<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> get() {
+            return new Transformer<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
                 private ProcessorContext context;
 
                 @Override
@@ -102,8 +102,8 @@ public class ShelveExpirationRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> transform(OverriddenAlarmKey key, OverriddenAlarmValue value) {
-                    KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = null; // null returned to mean no record
+                public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> transform(OverriddenAlarmKey key, AlarmOverrideUnion value) {
+                    KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> result = null; // null returned to mean no record
 
                     log.debug("Handling message: {}={}", key, value);
 

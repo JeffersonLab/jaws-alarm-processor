@@ -16,12 +16,12 @@ public class LatchRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, Alarm> inputTopicMonolog;
     private TestOutputTopic<String, Alarm> outputPassthroughTopic;
-    private TestOutputTopic<OverriddenAlarmKey, OverriddenAlarmValue> outputOverrideTopic;
+    private TestOutputTopic<OverriddenAlarmKey, AlarmOverrideUnion> outputOverrideTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
-    private AlarmActivation active1;
-    private AlarmActivation active2;
+    private AlarmActivationUnion active1;
+    private AlarmActivationUnion active2;
     private Alarm mono1;
 
     @Before
@@ -63,8 +63,8 @@ public class LatchRuleTest {
         class1.setPointofcontactusername("tester");
         class1.setRationale("because");
 
-        active1 = new AlarmActivation();
-        active2 = new AlarmActivation();
+        active1 = new AlarmActivationUnion();
+        active2 = new AlarmActivationUnion();
 
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
@@ -74,7 +74,7 @@ public class LatchRuleTest {
         mono1.setClass$(class1);
         mono1.setRegistration(registered1);
         mono1.setEffectiveRegistration(MonologRule.computeEffectiveRegistration(registered1, class1));
-        mono1.setOverrides(new AlarmOverrides());
+        mono1.setOverrides(new AlarmOverrideSet());
         mono1.setTransitions(new ProcessorTransitions());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
@@ -92,7 +92,7 @@ public class LatchRuleTest {
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
-        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+        List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, passthroughResults.size());
         Assert.assertEquals(0, overrideResults.size());
@@ -105,7 +105,7 @@ public class LatchRuleTest {
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);
         List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
-        List<KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+        List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         System.err.println("\n\nInitial Passthrough:");
         for(KeyValue<String, Alarm> pass: passthroughResults) {
@@ -113,7 +113,7 @@ public class LatchRuleTest {
         }
 
         System.err.println("\n\nInitial Overrides:");
-        for(KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> over: overrideResults) {
+        for(KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> over: overrideResults) {
             System.err.println(over);
         }
 
@@ -126,10 +126,10 @@ public class LatchRuleTest {
 
         Assert.assertEquals(true, passResult.value.getTransitions().getLatching());
 
-        KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> result = overrideResults.get(0);
+        KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> result = overrideResults.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
-        Assert.assertEquals(new OverriddenAlarmValue(new LatchedOverride()), result.value);
+        Assert.assertEquals(new AlarmOverrideUnion(new LatchedOverride()), result.value);
 
         Alarm mono2 = Alarm.newBuilder(mono1).build();
 
@@ -147,7 +147,7 @@ public class LatchRuleTest {
         }
 
         System.err.println("\n\nFinal Overrides:");
-        for(KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> over: overrideResults) {
+        for(KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> over: overrideResults) {
             System.err.println(over);
         }
 

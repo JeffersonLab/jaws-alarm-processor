@@ -34,7 +34,7 @@ public class LatchRule extends ProcessingRule {
     public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde LATCH_STORE_KEY_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde LATCH_STORE_VALUE_SERDE = new Serdes.StringSerde();
@@ -79,10 +79,10 @@ public class LatchRule extends ProcessingRule {
             }
         });
 
-        KStream<OverriddenAlarmKey, OverriddenAlarmValue> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, OverriddenAlarmValue>>() {
+        KStream<OverriddenAlarmKey, AlarmOverrideUnion> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, OverriddenAlarmValue> apply(String key, Alarm value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new OverriddenAlarmValue(new LatchedOverride()));
+            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, Alarm value) {
+                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new AlarmOverrideUnion(new LatchedOverride()));
             }
         });
 

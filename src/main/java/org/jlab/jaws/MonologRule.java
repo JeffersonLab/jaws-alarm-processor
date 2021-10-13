@@ -39,10 +39,10 @@ public class MonologRule extends ProcessingRule {
 
     public static final SpecificAvroSerde<AlarmRegistration> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<AlarmActivation> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmActivationUnion> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -88,7 +88,7 @@ public class MonologRule extends ProcessingRule {
                 Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
         final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicRegistered,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
-        final KTable<String, AlarmActivation> activeTable = builder.table(inputTopicActive,
+        final KTable<String, AlarmActivationUnion> activeTable = builder.table(inputTopicActive,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
         KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
@@ -129,7 +129,7 @@ public class MonologRule extends ProcessingRule {
                     }
                 });
 
-        final StoreBuilder<KeyValueStore<String, AlarmActivation>> storeBuilder = Stores.keyValueStoreBuilder(
+        final StoreBuilder<KeyValueStore<String, AlarmActivationUnion>> storeBuilder = Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore("PreviousActiveStateStore"),
                 INPUT_KEY_ACTIVE_SERDE,
                 INPUT_VALUE_ACTIVE_SERDE
@@ -190,16 +190,16 @@ public class MonologRule extends ProcessingRule {
                     .setClass$(clazz)
                     .setEffectiveRegistration(effectiveRegistered)
                     .setActivation(null)
-                    .setOverrides(new AlarmOverrides())
+                    .setOverrides(new AlarmOverrideSet())
                     .setTransitions(new ProcessorTransitions())
                     .setState(AlarmState.Normal)
                     .build();
         }
     }
 
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, AlarmActivation, Alarm> {
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, AlarmActivationUnion, Alarm> {
 
-        public Alarm apply(Alarm registered, AlarmActivation active) {
+        public Alarm apply(Alarm registered, AlarmActivationUnion active) {
 
             //System.err.println("active joiner: " + active + ", registered: " + registered);
 
@@ -212,7 +212,7 @@ public class MonologRule extends ProcessingRule {
                         .setRegistration(null)
                         .setClass$(null)
                         .setEffectiveRegistration(null)
-                        .setOverrides(new AlarmOverrides())
+                        .setOverrides(new AlarmOverrideSet())
                         .setTransitions(new ProcessorTransitions())
                         .setState(AlarmState.Normal)
                         .setActivation(active).build();
@@ -228,23 +228,23 @@ public class MonologRule extends ProcessingRule {
 
             //System.err.println("override joiner: " + registeredAndActive);
 
-            AlarmOverrides overrides = AlarmOverrides.newBuilder()
+            AlarmOverrideSet overrides = AlarmOverrideSet.newBuilder()
                     .setDisabled(null)
                     .setFiltered(null)
                     .setLatched(null)
                     .setMasked(null)
-                    .setOffdelay(null)
-                    .setOndelay(null)
+                    .setOffdelayed(null)
+                    .setOndelayed(null)
                     .setShelved(null)
                     .build();
 
             if(overrideList != null) {
-                for(OverriddenAlarmValue over: overrideList.getOverrides()) {
-                    if(over.getMsg() instanceof DisabledAlarm) {
+                for(AlarmOverrideUnion over: overrideList.getOverrides()) {
+                    if(over.getMsg() instanceof DisabledOverride) {
                         overrides.setDisabled((DisabledOverride) over.getMsg());
                     }
 
-                    if(over.getMsg() instanceof FilteredAlarm) {
+                    if(over.getMsg() instanceof FilteredOverride) {
                         overrides.setFiltered((FilteredOverride) over.getMsg());
                     }
                 }
@@ -270,7 +270,7 @@ public class MonologRule extends ProcessingRule {
     }
 
     private KTable<String, OverrideList> getOverriddenViaGroupBy(StreamsBuilder builder) {
-        final KTable<OverriddenAlarmKey, OverriddenAlarmValue> overriddenTable = builder.table(inputTopicOverridden,
+        final KTable<OverriddenAlarmKey, AlarmOverrideUnion> overriddenTable = builder.table(inputTopicOverridden,
                 Consumed.as("Overridden-Table").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
         final KTable<String, OverrideList> groupTable = overriddenTable
@@ -289,9 +289,9 @@ public class MonologRule extends ProcessingRule {
                         (key, oldValue, aggregate) -> {
                             //System.err.println("subtract: " + key + ", " + oldValue + ", " + aggregate);
 
-                            ArrayList<OverriddenAlarmValue> tmp = new ArrayList<>(aggregate.getOverrides());
+                            ArrayList<AlarmOverrideUnion> tmp = new ArrayList<>(aggregate.getOverrides());
 
-                            for(OverriddenAlarmValue oav: oldValue.getOverrides()) {
+                            for(AlarmOverrideUnion oav: oldValue.getOverrides()) {
                                 tmp.remove(oav);
                             }
                             return new OverrideList(tmp);
@@ -301,8 +301,8 @@ public class MonologRule extends ProcessingRule {
         return groupTable;
     }
 
-    private static KeyValue<String, OverrideList> groupOverride(OverriddenAlarmKey key, OverriddenAlarmValue value) {
-        List<OverriddenAlarmValue> list = new ArrayList<>();
+    private static KeyValue<String, OverrideList> groupOverride(OverriddenAlarmKey key, AlarmOverrideUnion value) {
+        List<AlarmOverrideUnion> list = new ArrayList<>();
         list.add(value);
         return new KeyValue<>(key.getName(), new OverrideList(list));
     }
@@ -328,20 +328,20 @@ public class MonologRule extends ProcessingRule {
         @Override
         public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
             return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
-                private KeyValueStore<String, AlarmActivation> store;
+                private KeyValueStore<String, AlarmActivationUnion> store;
                 private ProcessorContext context;
 
                 @Override
                 @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
                 public void init(ProcessorContext context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, AlarmActivation>) context.getStateStore(storeName);
+                    this.store = (KeyValueStore<String, AlarmActivationUnion>) context.getStateStore(storeName);
                 }
 
                 @Override
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    AlarmActivation previous = store.get(key);
-                    AlarmActivation next = null;
+                    AlarmActivationUnion previous = store.get(key);
+                    AlarmActivationUnion next = null;
 
                     //System.err.println("previous: " + previous);
                     //System.err.println("next: " + (value == null ? null : value.getActive()));

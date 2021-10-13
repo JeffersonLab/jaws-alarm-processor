@@ -32,7 +32,7 @@ public class EffectiveStateRule extends ProcessingRule {
     public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<OverriddenAlarmValue> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public EffectiveStateRule(String inputTopic, String outputTopic) {
         super(inputTopic, outputTopic);
@@ -110,7 +110,7 @@ public class EffectiveStateRule extends ProcessingRule {
                         state = AlarmState.Active;
                     }
 
-                    if(value.getOverrides().getOffdelay() != null) {
+                    if(value.getOverrides().getOffdelayed() != null) {
                         state = AlarmState.ActiveOffDelayed;
                     }
 
@@ -119,7 +119,7 @@ public class EffectiveStateRule extends ProcessingRule {
                         state = AlarmState.ActiveLatched;
                     }
 
-                    if(value.getOverrides().getOndelay() != null) {
+                    if(value.getOverrides().getOndelayed() != null) {
                         state = AlarmState.NormalOnDelayed;
                     }
 

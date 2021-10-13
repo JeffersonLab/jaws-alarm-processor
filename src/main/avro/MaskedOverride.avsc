@@ -1,7 +1,0 @@
-{
-  "type": "record",
-  "name": "MaskedOverride",
-  "namespace": "org.jlab.jaws.entity",
-  "doc": "A masked override",
-  "fields": []
-}
