@@ -3,4 +3,4 @@ version: '3.8'
 
 services:
   alarms:
-    image: slominskir/jaws-auto-override-processor:2.0.0
+    image: slominskir/jaws-alarm-processor:2.0.0
