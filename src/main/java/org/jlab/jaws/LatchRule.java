@@ -142,7 +142,7 @@ public class LatchRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    log.debug("Processing key = " + key + ", value = " + value);
+                    log.debug("Processing key = {}, value = \n\tReg: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getEffectiveRegistration(),value.getActivation(),value.getOverrides(),value.getTransitions());
 
                     // Skip the filter unless latching is registered
                     if(value.getEffectiveRegistration() != null && Boolean.TRUE.equals(value.getEffectiveRegistration().getLatching())) {
@@ -166,9 +166,9 @@ public class LatchRule extends ProcessingRule {
                             value.getTransitions().setLatching(true);
                         }
 
-                        //System.err.println("latched: " + latched);
-                        //System.err.println("needToLatch: " + needToLatch);
-                        //System.err.println("latching: " + latching);
+                        log.debug("latched: " + latched);
+                        log.debug("needToLatch: " + needToLatch);
+                        log.debug("latching: " + latching);
 
                         store.put(key, latching ? "y" : null);
                     }

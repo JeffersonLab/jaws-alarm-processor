@@ -248,6 +248,26 @@ public class MonologRule extends ProcessingRule {
                     if(over.getMsg() instanceof FilteredOverride) {
                         overrides.setFiltered((FilteredOverride) over.getMsg());
                     }
+
+                    if(over.getMsg() instanceof LatchedOverride) {
+                        overrides.setLatched((LatchedOverride) over.getMsg());
+                    }
+
+                    if(over.getMsg() instanceof MaskedOverride) {
+                        overrides.setMasked((MaskedOverride) over.getMsg());
+                    }
+
+                    if(over.getMsg() instanceof OnDelayedOverride) {
+                        overrides.setOndelayed((OnDelayedOverride) over.getMsg());
+                    }
+
+                    if(over.getMsg() instanceof OffDelayedOverride) {
+                        overrides.setOffdelayed((OffDelayedOverride) over.getMsg());
+                    }
+
+                    if(over.getMsg() instanceof ShelvedOverride) {
+                        overrides.setShelved((ShelvedOverride) over.getMsg());
+                    }
                 }
             }
 
