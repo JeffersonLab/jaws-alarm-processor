@@ -74,7 +74,7 @@ public class OneShotRule extends ProcessingRule {
         KStream<String, Alarm> oneshotOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
             @Override
             public boolean test(String key, Alarm value) {
-                System.err.println("Filtering: " + key + ", value: " + value);
+                log.debug("Filtering: " + key + ", value: " + value);
                 return value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
             }
         });
@@ -142,7 +142,7 @@ public class OneShotRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    System.err.println("Processing key = " + key + ", value = " + value);
+                    log.debug("Processing key = " + key + ", value = " + value);
 
                     boolean unshelving = false;
 

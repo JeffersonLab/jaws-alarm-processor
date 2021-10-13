@@ -74,7 +74,7 @@ public class LatchRule extends ProcessingRule {
         KStream<String, Alarm> latchOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
             @Override
             public boolean test(String key, Alarm value) {
-                //System.err.println("Filtering: " + key + ", value: " + value);
+                log.debug("Filtering: " + key + ", value: " + value);
                 return value.getEffectiveRegistration() != null && value.getEffectiveRegistration().getLatching() && value.getTransitions().getTransitionToActive();
             }
         });
@@ -142,7 +142,7 @@ public class LatchRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    //System.err.println("Processing key = " + key + ", value = " + value);
+                    log.debug("Processing key = " + key + ", value = " + value);
 
                     // Skip the filter unless latching is registered
                     if(value.getEffectiveRegistration() != null && value.getEffectiveRegistration().getLatching()) {

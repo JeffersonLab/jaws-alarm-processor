@@ -96,7 +96,7 @@ public class MonologRule extends ProcessingRule {
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
-                        System.err.println("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
+                        log.debug("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
                 });
@@ -106,7 +106,7 @@ public class MonologRule extends ProcessingRule {
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
-                        System.err.println("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
+                        log.debug("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
                 });
@@ -124,7 +124,7 @@ public class MonologRule extends ProcessingRule {
                 .filter(new Predicate<String, Alarm>() {
                     @Override
                     public boolean test(String key, Alarm value) {
-                        System.err.println("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
+                        log.debug("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
                 });
