@@ -20,13 +20,13 @@ public class AlarmProcessor {
     public static void main(String[] args) {
 
         // async
-        rules.add(new ShelveExpirationRule("overridden-alarms", "overridden-alarms"));
+        rules.add(new ShelveExpirationRule("alarm-overrides", "alarm-overrides"));
 
         // pipelined
-        rules.add(new MonologRule("registered-classes", "registered-alarms", "active-alarms", "overridden-alarms", "monolog"));
-        rules.add(new LatchRule("monolog", "latch-processed", "overridden-alarms"));
-        rules.add(new OneShotRule("latch-processed", "unshelve-processed", "overridden-alarms"));
-        rules.add(new EffectiveStateRule("unshelve-processed", "alarms"));
+        rules.add(new MonologRule("alarm-classes", "alarm-registrations", "alarm-activations", "alarm-overrides", "intermediate-monolog"));
+        rules.add(new LatchRule("intermediate-monolog", "intermediate-latch-processed", "alarm-overrides"));
+        rules.add(new OneShotRule("intermediate-latch-processed", "intermediate-unshelve-processed", "alarm-overrides"));
+        rules.add(new EffectiveStateRule("intermediate-unshelve-processed", "alarms"));
 
         final CountDownLatch latch = new CountDownLatch(1);
 
