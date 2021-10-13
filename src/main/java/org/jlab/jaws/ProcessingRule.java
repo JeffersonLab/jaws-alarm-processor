@@ -84,7 +84,7 @@ public abstract class ProcessingRule {
             }
 
             headers.add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
-            headers.add("producer", "jaws-auto-override-processor".getBytes(StandardCharsets.UTF_8));
+            headers.add("producer", "jaws-alarm-processor".getBytes(StandardCharsets.UTF_8));
             headers.add("host", host.getBytes(StandardCharsets.UTF_8));
         } else {
             log.debug("Headers are unavailable");
