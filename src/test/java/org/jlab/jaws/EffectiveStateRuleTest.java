@@ -132,4 +132,32 @@ public class EffectiveStateRuleTest {
         Assert.assertEquals(1, stateResults.size());
         Assert.assertEquals("ActiveLatched", passResult.value.getState().name());
     }
+
+    @Test
+    public void shelved() {
+        mono1.setActivation(active1);
+
+        inputTopic.pipeInput("alarm1", mono1);
+        List<KeyValue<String, Alarm>> stateResults = outputTopic.readKeyValuesToList();
+
+        Assert.assertEquals(1, stateResults.size());
+        Assert.assertEquals("Active", stateResults.get(0).value.getState().name());
+
+
+        Alarm mono2 = Alarm.newBuilder(mono1).build();
+
+        mono2.getOverrides().setShelved(new ShelvedOverride(false, 12345l, ShelvedReason.Other, null));
+
+        inputTopic.pipeInput("alarm1", mono2);
+
+        stateResults = outputTopic.readKeyValuesToList();
+
+        System.err.println("\n\nFinal State:");
+        for(KeyValue<String, Alarm> pass: stateResults) {
+            System.err.println(pass);
+        }
+
+        Assert.assertEquals(1, stateResults.size());
+        Assert.assertEquals("NormalContinuousShelved", stateResults.get(0).value.getState().name());
+    }
 }
