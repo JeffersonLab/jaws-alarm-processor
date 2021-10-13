@@ -44,7 +44,7 @@ public class ShelveExpirationRule extends ProcessingRule {
     public Properties constructProperties() {
         final Properties props = super.constructProperties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-auto-override-processor-shelve-expiration");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor-shelve");
 
         return props;
     }
