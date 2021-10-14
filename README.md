@@ -11,6 +11,8 @@ Automated overrides include:
 - **latch** - Add a Latched override for alarms registered as latching that become active
 - **mask** - Add a Masked override to an alarm with an active parent alarm and removes the Masked override when the parent alarm is no longer active
 
+The alarm processor merges alarm classes with alarm registrations to compute an effective registration for each alarm.
+
 ---
  - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-alarm-processor#quick-start-with-compose)
  - [Build](https://github.com/JeffersonLab/jaws-alarm-processor#build)
