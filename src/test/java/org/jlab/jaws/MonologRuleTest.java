@@ -17,8 +17,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class MonologRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
-    private TestInputTopic<String, AlarmClass> inputTopicClasses;
+    private TestInputTopic<String, AlarmRegistration> inputTopicEffectiveRegistered;
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
     private TestOutputTopic<String, Alarm> outputTopic;
@@ -31,7 +30,7 @@ public class MonologRuleTest {
 
     @Before
     public void setup() {
-        final MonologRule rule = new MonologRule("registered-classes", "registered-alarms", "active-alarms", "overridden-alarms", "monolog");
+        final MonologRule rule = new MonologRule("effective-registrations", "active-alarms", "overridden-alarms", "monolog");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -39,8 +38,7 @@ public class MonologRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicClasses = testDriver.createInputTopic(rule.inputTopicClasses, MonologRule.INPUT_KEY_CLASSES_SERDE.serializer(), MonologRule.INPUT_VALUE_CLASSES_SERDE.serializer());
-        inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicRegistered, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
+        inputTopicEffectiveRegistered = testDriver.createInputTopic(rule.inputTopicEffectiveRegistered, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
         inputTopicActive = testDriver.createInputTopic(rule.inputTopicActive, MonologRule.INPUT_KEY_ACTIVE_SERDE.serializer(), MonologRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
         inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(rule.outputTopic, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
@@ -71,7 +69,7 @@ public class MonologRuleTest {
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
 
-        effectiveRegistered1 = MonologRule.computeEffectiveRegistration(registered1, class1);
+        effectiveRegistered1 = EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1);
 
         active1 = new AlarmActivationUnion();
         active2 = new AlarmActivationUnion();
@@ -100,7 +98,7 @@ public class MonologRuleTest {
     public void count() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicRegistered.pipeInput("alarm1", registered2);
+        inputTopicEffectiveRegistered.pipeInput("alarm1", registered2);
         List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(2, results.size());
     }
@@ -125,8 +123,7 @@ public class MonologRuleTest {
     public void content() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicRegistered.pipeInput("alarm1", registered1);
-        inputTopicClasses.pipeInput("base", class1);
+        inputTopicEffectiveRegistered.pipeInput("alarm1", EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1));
         List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
@@ -134,21 +131,24 @@ public class MonologRuleTest {
             System.err.println(result);
         }
 
-        Assert.assertEquals(3, results.size());
+        Assert.assertEquals(2, results.size());
 
-        KeyValue<String, Alarm> result2 = results.get(2);
+        KeyValue<String, Alarm> result2 = results.get(1);
+
+        Alarm expected = new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrideSet(), new ProcessorTransitions(), AlarmState.Normal);
+
+        System.err.println(expected);
+        System.err.println(result2.value);
 
         Assert.assertEquals("alarm1", result2.key);
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrideSet(), new ProcessorTransitions(), AlarmState.Normal), result2.value);
+        Assert.assertEquals(expected, result2.value);
     }
 
     @Test
     public void addOverride() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicRegistered.pipeInput("alarm1", registered1);
-
-        inputTopicClasses.pipeInput("base", class1);
+        inputTopicEffectiveRegistered.pipeInput("alarm1", registered1);
 
         AlarmOverrideUnion AlarmOverrideUnion1 = new AlarmOverrideUnion();
         LatchedOverride latchedOverride = new LatchedOverride();
@@ -172,9 +172,9 @@ public class MonologRuleTest {
             System.err.println(result);
         }
 
-        Assert.assertEquals(6, results.size());
+        Assert.assertEquals(5, results.size());
 
-        KeyValue<String, Alarm> result = results.get(5);
+        KeyValue<String, Alarm> result = results.get(4);
 
         AlarmOverrideSet overrides = AlarmOverrideSet.newBuilder()
                 .setLatched(new LatchedOverride())
@@ -186,8 +186,7 @@ public class MonologRuleTest {
 
     @Test
     public void transitions() {
-        inputTopicClasses.pipeInput("base", class1);
-        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicEffectiveRegistered.pipeInput("alarm1", registered1);
 
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));

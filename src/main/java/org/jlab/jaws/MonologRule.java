@@ -28,17 +28,14 @@ public class MonologRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(MonologRule.class);
 
-    String inputTopicClasses;
-    String inputTopicRegistered;
+    String inputTopicEffectiveRegistered;
     String inputTopicActive;
     String inputTopicOverridden;
 
     public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
-    public static final Serdes.StringSerde INPUT_KEY_CLASSES_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde INPUT_KEY_ACTIVE_SERDE = new Serdes.StringSerde();
 
     public static final SpecificAvroSerde<AlarmRegistration> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<AlarmClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmActivationUnion> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
@@ -49,10 +46,9 @@ public class MonologRule extends ProcessingRule {
 
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public MonologRule(String inputTopicClasses, String inputTopicRegistered, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
+    public MonologRule(String inputTopicEffectiveRegistered, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
         super(null, outputTopic);
-        this.inputTopicClasses = inputTopicClasses;
-        this.inputTopicRegistered = inputTopicRegistered;
+        this.inputTopicEffectiveRegistered = inputTopicEffectiveRegistered;
         this.inputTopicActive = inputTopicActive;
         this.inputTopicOverridden = inputTopicOverridden;
     }
@@ -75,7 +71,6 @@ public class MonologRule extends ProcessingRule {
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
 
         INPUT_VALUE_REGISTERED_SERDE.configure(config, false);
-        INPUT_VALUE_CLASSES_SERDE.configure(config, false);
         INPUT_VALUE_ACTIVE_SERDE.configure(config, false);
 
         OVERRIDE_KEY_SERDE.configure(config, true);
@@ -84,24 +79,13 @@ public class MonologRule extends ProcessingRule {
         MONOLOG_VALUE_SERDE.configure(config, false);
         OVERRIDE_LIST_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, AlarmClass> classesTable = builder.table(inputTopicClasses,
-                Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
-        final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicRegistered,
+        final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicEffectiveRegistered,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
         final KTable<String, AlarmActivationUnion> activeTable = builder.table(inputTopicActive,
                 Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
 
-        KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
-                AlarmRegistration::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
-                .filter(new Predicate<String, Alarm>() {
-                    @Override
-                    public boolean test(String key, Alarm value) {
-                        log.debug("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
-                        return true;
-                    }
-                });
 
-        KTable<String, Alarm> registeredAndActive = classesAndRegistered.outerJoin(activeTable,
+        KTable<String, Alarm> registeredAndActive = registeredTable.outerJoin(activeTable,
                 new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
                 .filter(new Predicate<String, Alarm>() {
                     @Override
@@ -112,13 +96,6 @@ public class MonologRule extends ProcessingRule {
                 });
 
         KTable<String, OverrideList> overriddenItems = getOverriddenViaGroupBy(builder);
-
-        /*KStream<String, Alarm> plusOverrides = registeredAndActive.toStream()
-                .outerJoin(overriddenItems.toStream(),
-                        new OverrideJoiner(),
-                        JoinWindows.of(Duration.of(1, ChronoUnit.SECONDS)),
-                        StreamJoined.with(Serdes.String(), MONOLOG_VALUE_SERDE, OVERRIDE_LIST_VALUE_SERDE))*/
-
 
         KTable<String, Alarm> plusOverrides = registeredAndActive.outerJoin(overriddenItems, new OverrideJoiner())
                 .filter(new Predicate<String, Alarm>() {
@@ -152,72 +129,20 @@ public class MonologRule extends ProcessingRule {
         return builder.build();
     }
 
-    public static AlarmRegistration computeEffectiveRegistration(AlarmRegistration registered, AlarmClass clazz) {
-        AlarmRegistration effectiveRegistered = AlarmRegistration.newBuilder(registered).build();
-        if(clazz != null) {
-            if (effectiveRegistered.getCategory() == null) effectiveRegistered.setCategory(clazz.getCategory());
-            if (effectiveRegistered.getCorrectiveaction() == null)
-                effectiveRegistered.setCorrectiveaction(clazz.getCorrectiveaction());
-            if (effectiveRegistered.getLatching() == null) effectiveRegistered.setLatching(clazz.getLatching());
-            if (effectiveRegistered.getFilterable() == null)
-                effectiveRegistered.setFilterable(clazz.getFilterable());
-            if (effectiveRegistered.getLocation() == null) effectiveRegistered.setLocation(clazz.getLocation());
-            if (effectiveRegistered.getMaskedby() == null) effectiveRegistered.setMaskedby(clazz.getMaskedby());
-            if (effectiveRegistered.getOffdelayseconds() == null)
-                effectiveRegistered.setOffdelayseconds(clazz.getOffdelayseconds());
-            if (effectiveRegistered.getOndelayseconds() == null)
-                effectiveRegistered.setOndelayseconds(clazz.getOndelayseconds());
-            if (effectiveRegistered.getPointofcontactusername() == null)
-                effectiveRegistered.setPointofcontactusername(clazz.getPointofcontactusername());
-            if (effectiveRegistered.getPriority() == null) effectiveRegistered.setPriority(clazz.getPriority());
-            if (effectiveRegistered.getRationale() == null) effectiveRegistered.setRationale(clazz.getRationale());
-            if (effectiveRegistered.getScreenpath() == null)
-                effectiveRegistered.setScreenpath(clazz.getScreenpath());
-        }
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<AlarmRegistration, AlarmActivationUnion, Alarm> {
 
-        return effectiveRegistered;
-    }
-
-    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, Alarm> {
-
-        public Alarm apply(AlarmRegistration registered, AlarmClass clazz) {
-
-            //System.err.println("class joiner: " + registered);
-
-            AlarmRegistration effectiveRegistered = computeEffectiveRegistration(registered, clazz);
-
-            return Alarm.newBuilder()
-                    .setRegistration(registered)
-                    .setClass$(clazz)
-                    .setEffectiveRegistration(effectiveRegistered)
-                    .setActivation(null)
-                    .setOverrides(new AlarmOverrideSet())
-                    .setTransitions(new ProcessorTransitions())
-                    .setState(AlarmState.Normal)
-                    .build();
-        }
-    }
-
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, AlarmActivationUnion, Alarm> {
-
-        public Alarm apply(Alarm registered, AlarmActivationUnion active) {
+        public Alarm apply(AlarmRegistration registered, AlarmActivationUnion active) {
 
             //System.err.println("active joiner: " + active + ", registered: " + registered);
 
-            Alarm result;
-
-            if(registered != null) {
-                result = Alarm.newBuilder(registered).setActivation(active).build();
-            } else {
-                result = Alarm.newBuilder()
-                        .setRegistration(null)
-                        .setClass$(null)
-                        .setEffectiveRegistration(null)
-                        .setOverrides(new AlarmOverrideSet())
-                        .setTransitions(new ProcessorTransitions())
-                        .setState(AlarmState.Normal)
-                        .setActivation(active).build();
-            }
+            Alarm result = Alarm.newBuilder()
+                    .setRegistration(registered)
+                    .setClass$(null)
+                    .setEffectiveRegistration(null)
+                    .setOverrides(new AlarmOverrideSet())
+                    .setTransitions(new ProcessorTransitions())
+                    .setState(AlarmState.Normal)
+                    .setActivation(active).build();
 
             return result;
         }

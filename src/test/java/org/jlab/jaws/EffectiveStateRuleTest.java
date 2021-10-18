@@ -70,7 +70,7 @@ public class EffectiveStateRuleTest {
         mono1.setActivation(active1);
         mono1.setClass$(class1);
         mono1.setRegistration(registered1);
-        mono1.setEffectiveRegistration(MonologRule.computeEffectiveRegistration(registered1, class1));
+        mono1.setEffectiveRegistration(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1));
         mono1.setOverrides(new AlarmOverrideSet());
         mono1.setTransitions(new ProcessorTransitions());
         mono1.getTransitions().setTransitionToActive(true);
