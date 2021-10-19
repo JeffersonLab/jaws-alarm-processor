@@ -24,7 +24,7 @@ public class AlarmProcessor {
 
         // pipelined
         rules.add(new EffectiveRegistrationRule("alarm-registrations", "alarm-classes", "effective-registrations", "intermediate-registration-processed"));
-        rules.add(new MonologRule("effective-registrations", "alarm-activations", "alarm-overrides", "intermediate-monolog"));
+        rules.add(new MonologRule("intermediate-registration-processed", "alarm-activations", "alarm-overrides", "intermediate-monolog"));
         rules.add(new LatchRule("intermediate-monolog", "intermediate-latch-processed", "alarm-overrides"));
         rules.add(new OneShotRule("intermediate-latch-processed", "intermediate-oneshot-processed", "alarm-overrides"));
         rules.add(new EffectiveStateRule("intermediate-oneshot-processed", "effective-alarms"));
