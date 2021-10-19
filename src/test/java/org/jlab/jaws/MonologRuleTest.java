@@ -8,8 +8,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -17,7 +15,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class MonologRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, AlarmRegistration> inputTopicEffectiveRegistered;
+    private TestInputTopic<String, Alarm> inputTopicRegisteredMonolog;
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
     private TestOutputTopic<String, Alarm> outputTopic;
@@ -27,6 +25,7 @@ public class MonologRuleTest {
     private AlarmRegistration effectiveRegistered1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
+    private Alarm registeredMonolog1;
 
     @Before
     public void setup() {
@@ -38,8 +37,8 @@ public class MonologRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicEffectiveRegistered = testDriver.createInputTopic(rule.inputTopicEffectiveRegistered, MonologRule.INPUT_KEY_REGISTERED_SERDE.serializer(), MonologRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
-        inputTopicActive = testDriver.createInputTopic(rule.inputTopicActive, MonologRule.INPUT_KEY_ACTIVE_SERDE.serializer(), MonologRule.INPUT_VALUE_ACTIVE_SERDE.serializer());
+        inputTopicRegisteredMonolog = testDriver.createInputTopic(rule.inputTopicRegisteredMonolog, MonologRule.MONOLOG_KEY_SERDE.serializer(), MonologRule.MONOLOG_VALUE_SERDE.serializer());
+        inputTopicActive = testDriver.createInputTopic(rule.inputTopicActive, MonologRule.ACTIVE_KEY_SERDE.serializer(), MonologRule.ACTIVE_VALUE_SERDE.serializer());
         inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(rule.outputTopic, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
 
@@ -76,6 +75,15 @@ public class MonologRuleTest {
 
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
+
+        registeredMonolog1 = Alarm.newBuilder()
+                .setRegistration(registered1)
+                .setClass$(class1)
+                .setEffectiveRegistration(effectiveRegistered1)
+                .setOverrides(new AlarmOverrideSet())
+                .setTransitions(new ProcessorTransitions())
+                .setState(AlarmState.Normal)
+                .build();
     }
 
     @After
@@ -97,8 +105,7 @@ public class MonologRuleTest {
     @Test
     public void count() {
         inputTopicActive.pipeInput("alarm1", active1);
-        testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicEffectiveRegistered.pipeInput("alarm1", registered2);
+        inputTopicRegisteredMonolog.pipeInput("alarm1", registeredMonolog1);
         List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(2, results.size());
     }
@@ -123,7 +130,7 @@ public class MonologRuleTest {
     public void content() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicEffectiveRegistered.pipeInput("alarm1", EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1));
+        inputTopicRegisteredMonolog.pipeInput("alarm1", registeredMonolog1);
         List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
@@ -148,7 +155,7 @@ public class MonologRuleTest {
     public void addOverride() {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
-        inputTopicEffectiveRegistered.pipeInput("alarm1", registered1);
+        inputTopicRegisteredMonolog.pipeInput("alarm1", registeredMonolog1);
 
         AlarmOverrideUnion AlarmOverrideUnion1 = new AlarmOverrideUnion();
         LatchedOverride latchedOverride = new LatchedOverride();
@@ -186,7 +193,7 @@ public class MonologRuleTest {
 
     @Test
     public void transitions() {
-        inputTopicEffectiveRegistered.pipeInput("alarm1", registered1);
+        inputTopicRegisteredMonolog.pipeInput("alarm1", registeredMonolog1);
 
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));

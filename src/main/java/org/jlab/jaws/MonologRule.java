@@ -28,15 +28,12 @@ public class MonologRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(MonologRule.class);
 
-    String inputTopicEffectiveRegistered;
+    String inputTopicRegisteredMonolog;
     String inputTopicActive;
     String inputTopicOverridden;
 
-    public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
-    public static final Serdes.StringSerde INPUT_KEY_ACTIVE_SERDE = new Serdes.StringSerde();
-
-    public static final SpecificAvroSerde<AlarmRegistration> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<AlarmActivationUnion> INPUT_VALUE_ACTIVE_SERDE = new SpecificAvroSerde<>();
+    public static final Serdes.StringSerde ACTIVE_KEY_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<AlarmActivationUnion> ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -46,9 +43,9 @@ public class MonologRule extends ProcessingRule {
 
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public MonologRule(String inputTopicEffectiveRegistered, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
+    public MonologRule(String inputTopicRegisteredMonolog, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
         super(null, outputTopic);
-        this.inputTopicEffectiveRegistered = inputTopicEffectiveRegistered;
+        this.inputTopicRegisteredMonolog = inputTopicRegisteredMonolog;
         this.inputTopicActive = inputTopicActive;
         this.inputTopicOverridden = inputTopicOverridden;
     }
@@ -70,8 +67,7 @@ public class MonologRule extends ProcessingRule {
         Map<String, String> config = new HashMap<>();
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
 
-        INPUT_VALUE_REGISTERED_SERDE.configure(config, false);
-        INPUT_VALUE_ACTIVE_SERDE.configure(config, false);
+        ACTIVE_VALUE_SERDE.configure(config, false);
 
         OVERRIDE_KEY_SERDE.configure(config, true);
         OVERRIDE_VALUE_SERDE.configure(config, false);
@@ -79,13 +75,13 @@ public class MonologRule extends ProcessingRule {
         MONOLOG_VALUE_SERDE.configure(config, false);
         OVERRIDE_LIST_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicEffectiveRegistered,
-                Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
+        final KTable<String, Alarm> registeredMonologTable = builder.table(inputTopicRegisteredMonolog,
+                Consumed.as("Registered-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
         final KTable<String, AlarmActivationUnion> activeTable = builder.table(inputTopicActive,
-                Consumed.as("Active-Table").with(INPUT_KEY_ACTIVE_SERDE, INPUT_VALUE_ACTIVE_SERDE));
+                Consumed.as("Active-Table").with(ACTIVE_KEY_SERDE, ACTIVE_VALUE_SERDE));
 
 
-        KTable<String, Alarm> registeredAndActive = registeredTable.outerJoin(activeTable,
+        KTable<String, Alarm> registeredAndActive = registeredMonologTable.outerJoin(activeTable,
                 new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
                 .filter(new Predicate<String, Alarm>() {
                     @Override
@@ -108,8 +104,8 @@ public class MonologRule extends ProcessingRule {
 
         final StoreBuilder<KeyValueStore<String, AlarmActivationUnion>> storeBuilder = Stores.keyValueStoreBuilder(
                 Stores.persistentKeyValueStore("PreviousActiveStateStore"),
-                INPUT_KEY_ACTIVE_SERDE,
-                INPUT_VALUE_ACTIVE_SERDE
+                ACTIVE_KEY_SERDE,
+                ACTIVE_VALUE_SERDE
         ).withCachingEnabled();
 
         builder.addStateStore(storeBuilder);
@@ -129,20 +125,26 @@ public class MonologRule extends ProcessingRule {
         return builder.build();
     }
 
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<AlarmRegistration, AlarmActivationUnion, Alarm> {
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, AlarmActivationUnion, Alarm> {
 
-        public Alarm apply(AlarmRegistration registered, AlarmActivationUnion active) {
+        public Alarm apply(Alarm registered, AlarmActivationUnion active) {
 
             //System.err.println("active joiner: " + active + ", registered: " + registered);
 
             Alarm result = Alarm.newBuilder()
-                    .setRegistration(registered)
+                    .setRegistration(null)
                     .setClass$(null)
                     .setEffectiveRegistration(null)
                     .setOverrides(new AlarmOverrideSet())
                     .setTransitions(new ProcessorTransitions())
                     .setState(AlarmState.Normal)
                     .setActivation(active).build();
+
+            if(registered != null) {
+                result.setRegistration(registered.getRegistration());
+                result.setClass$(registered.getClass$());
+                result.setEffectiveRegistration(registered.getEffectiveRegistration());
+            }
 
             return result;
         }

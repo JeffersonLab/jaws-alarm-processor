@@ -17,7 +17,8 @@ public class EffectiveRegistrationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
     private TestInputTopic<String, AlarmClass> inputTopicClasses;
-    private TestOutputTopic<String, AlarmRegistration> outputTopic;
+    private TestOutputTopic<String, AlarmRegistration> outputTopicEffective;
+    private TestOutputTopic<String, Alarm> outputTopicMonolog;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
@@ -25,7 +26,7 @@ public class EffectiveRegistrationRuleTest {
 
     @Before
     public void setup() {
-        final EffectiveRegistrationRule rule = new EffectiveRegistrationRule("registered-classes", "registered-alarms", "effective-registrations");
+        final EffectiveRegistrationRule rule = new EffectiveRegistrationRule("registered-classes", "registered-alarms", "effective-registrations", "intermediate-registration-processed");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -35,7 +36,9 @@ public class EffectiveRegistrationRuleTest {
         // setup test topics
         inputTopicClasses = testDriver.createInputTopic(rule.inputTopicClasses, EffectiveRegistrationRule.INPUT_KEY_CLASSES_SERDE.serializer(), EffectiveRegistrationRule.INPUT_VALUE_CLASSES_SERDE.serializer());
         inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicRegistered, EffectiveRegistrationRule.INPUT_KEY_REGISTERED_SERDE.serializer(), EffectiveRegistrationRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(rule.outputTopic, EffectiveRegistrationRule.EFFECTIVE_KEY_SERDE.deserializer(), EffectiveRegistrationRule.EFFECTIVE_VALUE_SERDE.deserializer());
+        outputTopicEffective = testDriver.createOutputTopic(rule.outputTopicEffective, EffectiveRegistrationRule.EFFECTIVE_KEY_SERDE.deserializer(), EffectiveRegistrationRule.EFFECTIVE_VALUE_SERDE.deserializer());
+        outputTopicMonolog = testDriver.createOutputTopic(rule.outputTopicMonolog, EffectiveRegistrationRule.MONOLOG_KEY_SERDE.deserializer(), EffectiveRegistrationRule.MONOLOG_VALUE_SERDE.deserializer());
+
 
         registered1 = new AlarmRegistration();
         registered2 = new AlarmRegistration();
@@ -75,7 +78,7 @@ public class EffectiveRegistrationRuleTest {
     public void count() {
         inputTopicClasses.pipeInput("base", class1);
         inputTopicRegistered.pipeInput("alarm1", registered2);
-        List<KeyValue<String, AlarmRegistration>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, AlarmRegistration>> results = outputTopicEffective.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
     }
 
@@ -83,7 +86,7 @@ public class EffectiveRegistrationRuleTest {
     public void content() {
         inputTopicClasses.pipeInput("base", class1);
         inputTopicRegistered.pipeInput("alarm1", registered1);
-        List<KeyValue<String, AlarmRegistration>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, AlarmRegistration>> results = outputTopicEffective.readKeyValuesToList();
 
         System.err.println("\n\n\n");
         for(KeyValue<String, AlarmRegistration> result: results) {

@@ -29,6 +29,8 @@ public class EffectiveRegistrationRule extends ProcessingRule {
 
     String inputTopicClasses;
     String inputTopicRegistered;
+    String outputTopicEffective;
+    String outputTopicMonolog;
 
     public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde INPUT_KEY_CLASSES_SERDE = new Serdes.StringSerde();
@@ -39,10 +41,15 @@ public class EffectiveRegistrationRule extends ProcessingRule {
     public static final Serdes.StringSerde EFFECTIVE_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<AlarmRegistration> EFFECTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public EffectiveRegistrationRule(String inputTopicClasses, String inputTopicRegistered, String outputTopic) {
-        super(null, outputTopic);
+    public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+
+    public EffectiveRegistrationRule(String inputTopicClasses, String inputTopicRegistered, String outputTopicEffective, String outputTopicMonolog) {
+        super(null, null);
         this.inputTopicClasses = inputTopicClasses;
         this.inputTopicRegistered = inputTopicRegistered;
+        this.outputTopicEffective = outputTopicEffective;
+        this.outputTopicMonolog = outputTopicMonolog;
     }
 
     @Override
@@ -66,27 +73,38 @@ public class EffectiveRegistrationRule extends ProcessingRule {
         INPUT_VALUE_CLASSES_SERDE.configure(config, false);
 
         EFFECTIVE_VALUE_SERDE.configure(config, false);
+        MONOLOG_VALUE_SERDE.configure(config, false);
 
         final KTable<String, AlarmClass> classesTable = builder.table(inputTopicClasses,
                 Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
         final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicRegistered,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
 
-        KTable<String, AlarmRegistration> classesAndRegistered = registeredTable.leftJoin(classesTable,
-                AlarmRegistration::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), EFFECTIVE_VALUE_SERDE))
-                .filter(new Predicate<String, AlarmRegistration>() {
+        KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
+                AlarmRegistration::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
+                .filter(new Predicate<String, Alarm>() {
                     @Override
-                    public boolean test(String key, AlarmRegistration value) {
+                    public boolean test(String key, Alarm value) {
                         log.debug("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "value: " + value);
                         return true;
                     }
                 });
 
-        final KStream<String, AlarmRegistration> withHeaders = classesAndRegistered.toStream()
-                .transform(new AlarmRegistrationAddHeadersFactory());
+        final KStream<String, Alarm> withHeaders = classesAndRegistered.toStream()
+                .transform(new MonologAddHeadersFactory());
 
-        withHeaders.to(outputTopic, Produced.as("EffectiveRegistrations")
+        KStream<String, AlarmRegistration> effective = withHeaders.mapValues(new ValueMapper<Alarm, AlarmRegistration>() {
+            @Override
+            public AlarmRegistration apply(Alarm value) {
+                return value.getEffectiveRegistration();
+            }
+        });
+
+        effective.to(outputTopicEffective, Produced.as("EffectiveRegistration")
                 .with(EFFECTIVE_KEY_SERDE, EFFECTIVE_VALUE_SERDE));
+
+        withHeaders.to(outputTopicMonolog, Produced.as("MonologRegistration")
+                .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
     }
@@ -117,15 +135,24 @@ public class EffectiveRegistrationRule extends ProcessingRule {
         return effectiveRegistered;
     }
 
-    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, AlarmRegistration> {
+    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, Alarm> {
 
-        public AlarmRegistration apply(AlarmRegistration registered, AlarmClass clazz) {
+        public Alarm apply(AlarmRegistration registered, AlarmClass clazz) {
 
             //System.err.println("class joiner: " + registered);
 
             AlarmRegistration effectiveRegistered = computeEffectiveRegistration(registered, clazz);
 
-            return effectiveRegistered;
+            Alarm alarm = Alarm.newBuilder()
+                    .setRegistration(registered)
+                    .setClass$(clazz)
+                    .setEffectiveRegistration(effectiveRegistered)
+                    .setOverrides(new AlarmOverrideSet())
+                    .setTransitions(new ProcessorTransitions())
+                    .setState(AlarmState.Normal)
+                    .build();
+
+            return alarm;
         }
     }
 
