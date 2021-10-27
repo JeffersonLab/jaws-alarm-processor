@@ -39,7 +39,7 @@ public class MonologRule extends ProcessingRule {
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
@@ -75,17 +75,17 @@ public class MonologRule extends ProcessingRule {
         MONOLOG_VALUE_SERDE.configure(config, false);
         OVERRIDE_LIST_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, Alarm> registeredMonologTable = builder.table(inputTopicRegisteredMonolog,
+        final KTable<String, IntermediateMonolog> registeredMonologTable = builder.table(inputTopicRegisteredMonolog,
                 Consumed.as("Registered-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
         final KTable<String, AlarmActivationUnion> activeTable = builder.table(inputTopicActive,
                 Consumed.as("Active-Table").with(ACTIVE_KEY_SERDE, ACTIVE_VALUE_SERDE));
 
 
-        KTable<String, Alarm> registeredAndActive = registeredMonologTable.outerJoin(activeTable,
+        KTable<String, IntermediateMonolog> registeredAndActive = registeredMonologTable.outerJoin(activeTable,
                 new RegisteredAndActiveJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
-                .filter(new Predicate<String, Alarm>() {
+                .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
-                    public boolean test(String key, Alarm value) {
+                    public boolean test(String key, IntermediateMonolog value) {
                         log.debug("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
@@ -93,10 +93,10 @@ public class MonologRule extends ProcessingRule {
 
         KTable<String, OverrideList> overriddenItems = getOverriddenViaGroupBy(builder);
 
-        KTable<String, Alarm> plusOverrides = registeredAndActive.outerJoin(overriddenItems, new OverrideJoiner())
-                .filter(new Predicate<String, Alarm>() {
+        KTable<String, IntermediateMonolog> plusOverrides = registeredAndActive.outerJoin(overriddenItems, new OverrideJoiner())
+                .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
-                    public boolean test(String key, Alarm value) {
+                    public boolean test(String key, IntermediateMonolog value) {
                         log.debug("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
                         return true;
                     }
@@ -111,12 +111,12 @@ public class MonologRule extends ProcessingRule {
         builder.addStateStore(storeBuilder);
 
         // Ensure we always return non-null Alarm record and populate it with transition state
-        final KStream<String, Alarm> withTransitionState = plusOverrides.toStream()
+        final KStream<String, IntermediateMonolog> withTransitionState = plusOverrides.toStream()
                 .transform(new MonologRule.MsgTransformerFactory(storeBuilder.name()),
                         Named.as("ActiveTransitionStateProcessor"),
                         storeBuilder.name());
 
-        final KStream<String, Alarm> withHeaders = withTransitionState
+        final KStream<String, IntermediateMonolog> withHeaders = withTransitionState
                 .transform(new MonologAddHeadersFactory());
 
         withHeaders.to(outputTopic, Produced.as("Monolog")
@@ -125,34 +125,43 @@ public class MonologRule extends ProcessingRule {
         return builder.build();
     }
 
-    private final class RegisteredAndActiveJoiner implements ValueJoiner<Alarm, AlarmActivationUnion, Alarm> {
+    private final class RegisteredAndActiveJoiner implements ValueJoiner<IntermediateMonolog, AlarmActivationUnion, IntermediateMonolog> {
 
-        public Alarm apply(Alarm registered, AlarmActivationUnion active) {
+        public IntermediateMonolog apply(IntermediateMonolog registered, AlarmActivationUnion active) {
 
             //System.err.println("active joiner: " + active + ", registered: " + registered);
 
-            Alarm result = Alarm.newBuilder()
-                    .setRegistration(null)
+            EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                     .setClass$(null)
-                    .setEffectiveRegistration(null)
+                    .setActual(null)
+                    .setCalculated(null)
+                    .build();
+
+            EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
+                    .setActual(active)
                     .setOverrides(new AlarmOverrideSet())
-                    .setTransitions(new ProcessorTransitions())
                     .setState(AlarmState.Normal)
-                    .setActivation(active).build();
+                    .build();
+
+            IntermediateMonolog result = IntermediateMonolog.newBuilder()
+                    .setRegistration(effectiveReg)
+                    .setActivation(effectiveAct)
+                    .setTransitions(new ProcessorTransitions())
+                    .build();
 
             if(registered != null) {
-                result.setRegistration(registered.getRegistration());
-                result.setClass$(registered.getClass$());
-                result.setEffectiveRegistration(registered.getEffectiveRegistration());
+                result.getRegistration().setActual(registered.getRegistration().getActual());
+                result.getRegistration().setClass$(registered.getRegistration().getClass$());
+                result.getRegistration().setCalculated(registered.getRegistration().getCalculated());
             }
 
             return result;
         }
     }
 
-    private final class OverrideJoiner implements ValueJoiner<Alarm, OverrideList, Alarm> {
+    private final class OverrideJoiner implements ValueJoiner<IntermediateMonolog, OverrideList, IntermediateMonolog> {
 
-        public Alarm apply(Alarm registeredAndActive, OverrideList overrideList) {
+        public IntermediateMonolog apply(IntermediateMonolog registeredAndActive, OverrideList overrideList) {
 
             //System.err.println("override joiner: " + registeredAndActive);
 
@@ -198,18 +207,26 @@ public class MonologRule extends ProcessingRule {
                 }
             }
 
-            Alarm result;
+            IntermediateMonolog result;
 
             if(registeredAndActive != null) {
-                result = Alarm.newBuilder(registeredAndActive).setOverrides(overrides).build();
+                result = IntermediateMonolog.newBuilder(registeredAndActive)
+                        .build();
+
+                        result.getActivation().setOverrides(overrides);
             } else {
-                result = Alarm.newBuilder()
-                        .setRegistration(null)
-                        .setClass$(null)
-                        .setEffectiveRegistration(null)
+                EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
+                        .build();
+
+                EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
                         .setOverrides(overrides)
-                        .setTransitions(new ProcessorTransitions())
                         .setState(AlarmState.Normal)
+                        .build();
+
+                result = IntermediateMonolog.newBuilder()
+                        .setRegistration(effectiveReg)
+                        .setActivation(effectiveAct)
+                        .setTransitions(new ProcessorTransitions())
                         .build();
             }
 
@@ -255,7 +272,7 @@ public class MonologRule extends ProcessingRule {
         return new KeyValue<>(key.getName(), new OverrideList(list));
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
 
         private final String storeName;
 
@@ -274,8 +291,8 @@ public class MonologRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
-            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
+        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
+            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
                 private KeyValueStore<String, AlarmActivationUnion> store;
                 private ProcessorContext context;
 
@@ -287,7 +304,7 @@ public class MonologRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, Alarm> transform(String key, Alarm value) {
+                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
                     AlarmActivationUnion previous = store.get(key);
                     AlarmActivationUnion next = null;
 
@@ -298,20 +315,24 @@ public class MonologRule extends ProcessingRule {
                     boolean transitionToNormal = false;
 
                     // Handle Scenario where only one of Registration or Activation and it just got tombstoned!
-                    // Instead of forwarding Alarm = null we always forward non-null alarm,
+                    // Instead of forwarding IntermediateMonolog = null we always forward non-null IntermediateMonolog,
                     // but fields inside may be null
                     if(value == null) {
-                        value = Alarm.newBuilder()
-                                .setRegistration(null)
-                                .setClass$(null)
-                                .setEffectiveRegistration(null)
+                        EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder().build();
+
+                        EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
                                 .setOverrides(new AlarmOverrideSet())
-                                .setTransitions(new ProcessorTransitions())
                                 .setState(AlarmState.Normal)
-                                .setActivation(null).build();
+                                .build();
+
+                        value = IntermediateMonolog.newBuilder()
+                                .setRegistration(effectiveReg)
+                                .setActivation(effectiveAct)
+                                .setTransitions(new ProcessorTransitions())
+                                .build();
                     }
 
-                    next = value.getActivation();
+                    next = value.getActivation().getActual();
 
                     if (previous == null && next != null) {
                         //System.err.println("TRANSITION TO ACTIVE!");

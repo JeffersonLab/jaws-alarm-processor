@@ -15,17 +15,19 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class MonologRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, Alarm> inputTopicRegisteredMonolog;
+    private TestInputTopic<String, IntermediateMonolog> inputTopicRegisteredMonolog;
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
-    private TestOutputTopic<String, Alarm> outputTopic;
+    private TestOutputTopic<String, IntermediateMonolog> outputTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
     private AlarmRegistration effectiveRegistered1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
-    private Alarm registeredMonolog1;
+    private IntermediateMonolog registeredMonolog1;
+    private EffectiveRegistration effectiveReg;
+    EffectiveActivation effectiveAct;
 
     @Before
     public void setup() {
@@ -76,13 +78,22 @@ public class MonologRuleTest {
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
 
-        registeredMonolog1 = Alarm.newBuilder()
-                .setRegistration(registered1)
+        effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
-                .setEffectiveRegistration(effectiveRegistered1)
+                .setActual(registered1)
+                .setCalculated(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .build();
+
+        effectiveAct = EffectiveActivation.newBuilder()
+                .setActual(active1)
                 .setOverrides(new AlarmOverrideSet())
-                .setTransitions(new ProcessorTransitions())
                 .setState(AlarmState.Normal)
+                .build();
+
+        registeredMonolog1 = IntermediateMonolog.newBuilder()
+                .setRegistration(effectiveReg)
+                .setActivation(effectiveAct)
+                .setTransitions(new ProcessorTransitions())
                 .build();
     }
 
@@ -98,7 +109,7 @@ public class MonologRuleTest {
         AlarmOverrideUnion1.setMsg(latchedOverride);
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
 
-        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
     }
 
@@ -106,7 +117,7 @@ public class MonologRuleTest {
     public void count() {
         inputTopicActive.pipeInput("alarm1", active1);
         inputTopicRegisteredMonolog.pipeInput("alarm1", registeredMonolog1);
-        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(2, results.size());
     }
 
@@ -115,10 +126,10 @@ public class MonologRuleTest {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicActive.pipeInput("alarm1", null);
-        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, Alarm> result: results) {
+        for(KeyValue<String, IntermediateMonolog> result: results) {
             System.err.println(result);
         }
 
@@ -131,18 +142,18 @@ public class MonologRuleTest {
         inputTopicActive.pipeInput("alarm1", active1);
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicRegisteredMonolog.pipeInput("alarm1", registeredMonolog1);
-        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, Alarm> result: results) {
+        for(KeyValue<String, IntermediateMonolog> result: results) {
             System.err.println(result);
         }
 
         Assert.assertEquals(2, results.size());
 
-        KeyValue<String, Alarm> result2 = results.get(1);
+        KeyValue<String, IntermediateMonolog> result2 = results.get(1);
 
-        Alarm expected = new Alarm(registered1, class1, effectiveRegistered1, active1, new AlarmOverrideSet(), new ProcessorTransitions(), AlarmState.Normal);
+        IntermediateMonolog expected = new IntermediateMonolog(effectiveReg, effectiveAct, new ProcessorTransitions());
 
         System.err.println(expected);
         System.err.println(result2.value);
@@ -172,23 +183,26 @@ public class MonologRuleTest {
         inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), null);
 
 
-        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, Alarm> result: results) {
+        for(KeyValue<String, IntermediateMonolog> result: results) {
             System.err.println(result);
         }
 
         Assert.assertEquals(5, results.size());
 
-        KeyValue<String, Alarm> result = results.get(4);
+        KeyValue<String, IntermediateMonolog> result = results.get(4);
 
         AlarmOverrideSet overrides = AlarmOverrideSet.newBuilder()
                 .setLatched(new LatchedOverride())
                 .build();
 
+        EffectiveActivation ea = EffectiveActivation.newBuilder(effectiveAct).build();
+        ea.setOverrides(overrides);
+
         Assert.assertEquals("alarm1", result.key);
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, new ProcessorTransitions(), AlarmState.Normal), result.value);
+        Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, new ProcessorTransitions()), result.value);
     }
 
     @Test
@@ -206,21 +220,21 @@ public class MonologRuleTest {
         testDriver.advanceWallClockTime(Duration.ofSeconds(10));
         inputTopicActive.pipeInput("alarm1", active1);
 
-        List<KeyValue<String, Alarm>> results = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(5, results.size());
 
 
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, Alarm> result: results) {
+        for(KeyValue<String, IntermediateMonolog> result: results) {
             System.err.println(result);
         }
 
-        KeyValue<String, Alarm> result0 = results.get(0);
-        KeyValue<String, Alarm> result1 = results.get(1);
-        KeyValue<String, Alarm> result2 = results.get(2);
-        KeyValue<String, Alarm> result3 = results.get(3);
-        KeyValue<String, Alarm> result4 = results.get(4);
+        KeyValue<String, IntermediateMonolog> result0 = results.get(0);
+        KeyValue<String, IntermediateMonolog> result1 = results.get(1);
+        KeyValue<String, IntermediateMonolog> result2 = results.get(2);
+        KeyValue<String, IntermediateMonolog> result3 = results.get(3);
+        KeyValue<String, IntermediateMonolog> result4 = results.get(4);
 
         Assert.assertEquals("alarm1", result0.key);
 
@@ -228,17 +242,23 @@ public class MonologRuleTest {
                 .build();
 
         ProcessorTransitions transitions = ProcessorTransitions.newBuilder().build();
+        EffectiveActivation ea = EffectiveActivation.newBuilder(effectiveAct).build();
 
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, null, overrides, transitions, AlarmState.Normal), result0.value);
+        ea.setActual(null);
+        ea.setOverrides(overrides);
+        Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions), result0.value);
 
         ProcessorTransitions transitions2 = ProcessorTransitions.newBuilder().setTransitionToActive(true).build();
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result1.value);
+        ea.setActual(active1);
+        Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions2), result1.value);
 
         ProcessorTransitions transitions3 = ProcessorTransitions.newBuilder().setTransitionToNormal(true).build();
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, null, overrides, transitions3, AlarmState.Normal), result2.value);
+        ea.setActual(null);
+        Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions3), result2.value);
 
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions2, AlarmState.Normal), result3.value);
+        ea.setActual(active1);
+        Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions2), result3.value);
 
-        Assert.assertEquals(new Alarm(registered1, class1, effectiveRegistered1, active1, overrides, transitions, AlarmState.Normal), result4.value);
+        Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions), result4.value);
     }
 }

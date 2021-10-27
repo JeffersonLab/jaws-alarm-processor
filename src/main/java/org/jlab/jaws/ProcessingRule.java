@@ -9,7 +9,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.kstream.TransformerSupplier;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.jlab.jaws.entity.Alarm;
+import org.jlab.jaws.entity.IntermediateMonolog;
 import org.jlab.jaws.entity.AlarmOverrideUnion;
 import org.jlab.jaws.entity.OverriddenAlarmKey;
 import org.slf4j.Logger;
@@ -125,7 +125,7 @@ public abstract class ProcessingRule {
         }
     }
 
-    public final class MonologAddHeadersFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
+    public final class MonologAddHeadersFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
 
         /**
          * Return a new {@link Transformer} instance.
@@ -133,8 +133,8 @@ public abstract class ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
-            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
+        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
+            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
                 private ProcessorContext context;
 
                 @Override
@@ -143,7 +143,7 @@ public abstract class ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, Alarm> transform(String key, Alarm value) {
+                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
                     log.debug("Handling message: {}={}", key, value);
 
                     setHeaders(context);

@@ -32,7 +32,7 @@ public class MaskRule extends ProcessingRule {
     String overridesOutputTopic;
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -67,24 +67,24 @@ public class MaskRule extends ProcessingRule {
         OVERRIDE_KEY_SERDE.configure(config, true);
         OVERRIDE_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, Alarm> monologTable = builder.table(inputTopic,
+        final KTable<String, IntermediateMonolog> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        final KStream<String, Alarm> monologStream = monologTable.toStream();
+        final KStream<String, IntermediateMonolog> monologStream = monologTable.toStream();
 
         // TODO: Foreign key join on maskedBy field?  Parent active/normal status part of computation
         // Computing parent effective state might be too much (parent overrides) - just use actual parent active or not?
-        KStream<String, Alarm> maskOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
+        KStream<String, IntermediateMonolog> maskOverrideMonolog = monologStream.filter(new Predicate<String, IntermediateMonolog>() {
             @Override
-            public boolean test(String key, Alarm value) {
+            public boolean test(String key, IntermediateMonolog value) {
                 System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getOverrides().getMasked() == null && value.getTransitions().getTransitionToActive();
+                return value.getActivation().getOverrides().getMasked() == null && value.getTransitions().getTransitionToActive();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> maskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<OverriddenAlarmKey, AlarmOverrideUnion> maskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, Alarm value) {
+            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), new AlarmOverrideUnion(new MaskedOverride()));
             }
         });
@@ -92,17 +92,17 @@ public class MaskRule extends ProcessingRule {
         maskOverrides.to(overridesOutputTopic, Produced.as("Mask-Overrides").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
 
-        KStream<String, Alarm> unmaskOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
+        KStream<String, IntermediateMonolog> unmaskOverrideMonolog = monologStream.filter(new Predicate<String, IntermediateMonolog>() {
             @Override
-            public boolean test(String key, Alarm value) {
+            public boolean test(String key, IntermediateMonolog value) {
                 System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getOverrides().getMasked() != null && value.getTransitions().getTransitionToNormal();
+                return value.getActivation().getOverrides().getMasked() != null && value.getTransitions().getTransitionToNormal();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> unmaskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<OverriddenAlarmKey, AlarmOverrideUnion> unmaskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, Alarm value) {
+            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), null);
             }
         });
@@ -118,7 +118,7 @@ public class MaskRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, Alarm> passthrough = monologStream.transform(
+        final KStream<String, IntermediateMonolog> passthrough = monologStream.transform(
                 new MaskRule.MsgTransformerFactory(storeBuilder.name()),
                 Named.as("MaskTransitionProcessor"),
                 storeBuilder.name());
@@ -129,7 +129,7 @@ public class MaskRule extends ProcessingRule {
         return builder.build();
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
 
         private final String storeName;
 
@@ -148,8 +148,8 @@ public class MaskRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
-            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
+        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
+            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
                 private KeyValueStore<String, String> store;
                 private ProcessorContext context;
 
@@ -161,14 +161,14 @@ public class MaskRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, Alarm> transform(String key, Alarm value) {
+                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
                     System.err.println("Processing key = " + key + ", value = " + value);
 
                     // TODO: store and compute both masking and unmasking state
                     boolean masking = false;
                     boolean unmasking = false;
 
-                    if(value.getOverrides().getMasked() != null) {
+                    if(value.getActivation().getOverrides().getMasked() != null) {
 
                         // Check if already mask in-progress
                         masking = store.get(key) != null;

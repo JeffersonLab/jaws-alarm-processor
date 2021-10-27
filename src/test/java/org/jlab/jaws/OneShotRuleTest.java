@@ -14,15 +14,15 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class OneShotRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, Alarm> inputTopicMonolog;
-    private TestOutputTopic<String, Alarm> outputPassthroughTopic;
+    private TestInputTopic<String, IntermediateMonolog> inputTopicMonolog;
+    private TestOutputTopic<String, IntermediateMonolog> outputPassthroughTopic;
     private TestOutputTopic<OverriddenAlarmKey, AlarmOverrideUnion> outputOverrideTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
-    private Alarm mono1;
+    private IntermediateMonolog mono1;
 
     @Before
     public void setup() {
@@ -66,16 +66,24 @@ public class OneShotRuleTest {
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
 
-        mono1 = new Alarm();
-        mono1.setActivation(active1);
-        mono1.setClass$(class1);
-        mono1.setRegistration(registered1);
-        mono1.setEffectiveRegistration(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1));
-        mono1.setOverrides(new AlarmOverrideSet());
+        EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
+                .setClass$(class1)
+                .setActual(registered1)
+                .setCalculated(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .build();
+
+        EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
+                .setActual(active1)
+                .setOverrides(new AlarmOverrideSet())
+                .setState(AlarmState.Normal)
+                .build();
+
+        mono1 = new IntermediateMonolog();
+        mono1.setRegistration(effectiveReg);
+        mono1.setActivation(effectiveAct);
         mono1.setTransitions(new ProcessorTransitions());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
-        mono1.setState(AlarmState.Normal);
     }
 
     @After
@@ -89,11 +97,11 @@ public class OneShotRuleTest {
         shelved.setOneshot(false);
         shelved.setExpiration(1000);
         shelved.setReason(ShelvedReason.Other);
-        mono1.getOverrides().setShelved(shelved);
+        mono1.getActivation().getOverrides().setShelved(shelved);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);
-        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(0, overrideResults.size());
@@ -106,20 +114,20 @@ public class OneShotRuleTest {
         shelved.setOneshot(true);
         shelved.setExpiration(1000);
         shelved.setReason(ShelvedReason.Other);
-        mono1.getOverrides().setShelved(shelved);
+        mono1.getActivation().getOverrides().setShelved(shelved);
 
         mono1.getTransitions().setTransitionToActive(false);
         mono1.getTransitions().setTransitionToNormal(true);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);
-        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, overrideResults.size());
         Assert.assertEquals(1, passthroughResults.size());
 
-        KeyValue<String, Alarm> passResult = passthroughResults.get(0);
+        KeyValue<String, IntermediateMonolog> passResult = passthroughResults.get(0);
 
         Assert.assertEquals(true, passResult.value.getTransitions().getUnshelving());
     }
@@ -130,18 +138,18 @@ public class OneShotRuleTest {
         shelved.setOneshot(true);
         shelved.setExpiration(1000);
         shelved.setReason(ShelvedReason.Other);
-        mono1.getOverrides().setShelved(shelved);
+        mono1.getActivation().getOverrides().setShelved(shelved);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
 
 
-        Alarm mono2 = Alarm.newBuilder(mono1).build();
+        IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
         inputTopicMonolog.pipeInput("alarm1", mono2);
 
 
 
-        List<KeyValue<String, Alarm>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
         List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(0, overrideResults.size());

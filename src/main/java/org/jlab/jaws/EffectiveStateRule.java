@@ -29,7 +29,7 @@ public class EffectiveStateRule extends ProcessingRule {
     private static final Logger log = LoggerFactory.getLogger(EffectiveStateRule.class);
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -57,13 +57,13 @@ public class EffectiveStateRule extends ProcessingRule {
 
         MONOLOG_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, Alarm> monologTable = builder.table(inputTopic,
+        final KTable<String, IntermediateMonolog> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        final KStream<String, Alarm> monologStream = monologTable.toStream();
+        final KStream<String, IntermediateMonolog> monologStream = monologTable.toStream();
 
 
-        final KStream<String, Alarm> output = monologStream.transform(
+        final KStream<String, IntermediateMonolog> output = monologStream.transform(
                 new EffectiveStateRule.MsgTransformerFactory(),
                 Named.as("EffectiveStateTransitionProcessor"));
 
@@ -73,7 +73,7 @@ public class EffectiveStateRule extends ProcessingRule {
         return builder.build();
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
 
         /**
          * Create a new MsgTransformerFactory.
@@ -88,8 +88,8 @@ public class EffectiveStateRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
-            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
+        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
+            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
                 private ProcessorContext context;
 
                 @Override
@@ -99,53 +99,53 @@ public class EffectiveStateRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, Alarm> transform(String key, Alarm value) {
-                    log.debug("Processing key = {}, value = \n\tReg: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getEffectiveRegistration(),value.getActivation(),value.getOverrides(),value.getTransitions());
+                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
+                    log.debug("Processing key = {}, value = \n\tReg: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getCalculated(),value.getActivation(),value.getActivation().getOverrides(),value.getTransitions());
 
                     // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
                     AlarmState state = AlarmState.Normal;
 
-                    if(value.getActivation() != null) {
+                    if(value.getActivation().getActual() != null) {
                         state = AlarmState.Active;
                     }
 
-                    if(value.getOverrides().getOffdelayed() != null) {
+                    if(value.getActivation().getOverrides().getOffdelayed() != null) {
                         state = AlarmState.ActiveOffDelayed;
                     }
 
                     if(value.getTransitions().getLatching() ||
-                            value.getOverrides().getLatched() != null) {
+                            value.getActivation().getOverrides().getLatched() != null) {
                         state = AlarmState.ActiveLatched;
                     }
 
-                    if(value.getOverrides().getOndelayed() != null) {
+                    if(value.getActivation().getOverrides().getOndelayed() != null) {
                         state = AlarmState.NormalOnDelayed;
                     }
 
-                    if(value.getOverrides().getShelved() != null &&
+                    if(value.getActivation().getOverrides().getShelved() != null &&
                             !value.getTransitions().getUnshelving()) {
 
-                        if(value.getOverrides().getShelved().getOneshot()) {
+                        if(value.getActivation().getOverrides().getShelved().getOneshot()) {
                             state = AlarmState.NormalOneShotShelved;
                         } else {
                             state = AlarmState.NormalContinuousShelved;
                         }
                     }
 
-                    if(value.getOverrides().getMasked() != null) {
+                    if(value.getActivation().getOverrides().getMasked() != null) {
                         state = AlarmState.NormalMasked;
                     }
 
-                    if(value.getOverrides().getFiltered() != null) {
+                    if(value.getActivation().getOverrides().getFiltered() != null) {
                         state = AlarmState.NormalFiltered;
                     }
 
-                    if(value.getOverrides().getDisabled() != null) {
+                    if(value.getActivation().getOverrides().getDisabled() != null) {
                         state = AlarmState.NormalDisabled;
                     }
 
-                    value.setState(state);
+                    value.getActivation().setState(state);
 
                     return new KeyValue<>(key, value);
                 }

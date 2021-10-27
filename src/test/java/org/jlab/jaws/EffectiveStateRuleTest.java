@@ -14,14 +14,15 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class EffectiveStateRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, Alarm> inputTopic;
-    private TestOutputTopic<String, Alarm> outputTopic;
+    private TestInputTopic<String, IntermediateMonolog> inputTopic;
+    private TestOutputTopic<String, IntermediateMonolog> outputTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
-    private Alarm mono1;
+    private IntermediateMonolog mono1;
+    private EffectiveActivation effectiveAct;
 
     @Before
     public void setup() {
@@ -66,16 +67,24 @@ public class EffectiveStateRuleTest {
         active1.setMsg(new SimpleAlarming());
         active2.setMsg(new SimpleAlarming());
 
-        mono1 = new Alarm();
-        mono1.setActivation(active1);
-        mono1.setClass$(class1);
-        mono1.setRegistration(registered1);
-        mono1.setEffectiveRegistration(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1));
-        mono1.setOverrides(new AlarmOverrideSet());
+        EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
+                .setClass$(class1)
+                .setActual(registered1)
+                .setCalculated(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .build();
+
+        effectiveAct = EffectiveActivation.newBuilder()
+                .setActual(active1)
+                .setOverrides(new AlarmOverrideSet())
+                .setState(AlarmState.Normal)
+                .build();
+
+        mono1 = new IntermediateMonolog();
+        mono1.setRegistration(effectiveReg);
+        mono1.setActivation(effectiveAct);
         mono1.setTransitions(new ProcessorTransitions());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
-        mono1.setState(AlarmState.Normal);
     }
 
     @After
@@ -85,26 +94,27 @@ public class EffectiveStateRuleTest {
 
     @Test
     public void notLatching() {
-        mono1.setActivation(null);
+        mono1.getActivation().setActual(null);
+        mono1.getTransitions().setTransitionToActive(false);
 
         inputTopic.pipeInput("alarm1", mono1);
-        List<KeyValue<String, Alarm>> stateResults = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> stateResults = outputTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("Normal", stateResults.get(0).value.getState().name());
+        Assert.assertEquals("Normal", stateResults.get(0).value.getActivation().getState().name());
     }
 
     @Test
     public void latching() {
-        mono1.getEffectiveRegistration().setLatching(true);
-        mono1.setActivation(null);
+        mono1.getRegistration().getCalculated().setLatching(true);
+        mono1.getActivation().setActual(null);
         mono1.getTransitions().setLatching(true);
 
         inputTopic.pipeInput("alarm1", mono1);
-        List<KeyValue<String, Alarm>> stateResults = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> stateResults = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\nInitial State:");
-        for(KeyValue<String, Alarm> pass: stateResults) {
+        for(KeyValue<String, IntermediateMonolog> pass: stateResults) {
             System.err.println(pass);
         }
 
@@ -112,52 +122,52 @@ public class EffectiveStateRuleTest {
 
         Assert.assertEquals(1, stateResults.size());
 
-        KeyValue<String, Alarm> passResult = stateResults.get(0);
+        KeyValue<String, IntermediateMonolog> passResult = stateResults.get(0);
 
-        Assert.assertEquals("ActiveLatched", passResult.value.getState().name());
+        Assert.assertEquals("ActiveLatched", passResult.value.getActivation().getState().name());
 
-        Alarm mono2 = Alarm.newBuilder(mono1).build();
+        IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
-        mono2.getOverrides().setLatched(new LatchedOverride());
+        mono2.getActivation().getOverrides().setLatched(new LatchedOverride());
 
         inputTopic.pipeInput("alarm1", mono2);
 
         stateResults = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\nFinal State:");
-        for(KeyValue<String, Alarm> pass: stateResults) {
+        for(KeyValue<String, IntermediateMonolog> pass: stateResults) {
             System.err.println(pass);
         }
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("ActiveLatched", passResult.value.getState().name());
+        Assert.assertEquals("ActiveLatched", passResult.value.getActivation().getState().name());
     }
 
     @Test
     public void shelved() {
-        mono1.setActivation(active1);
+        mono1.setActivation(effectiveAct);
 
         inputTopic.pipeInput("alarm1", mono1);
-        List<KeyValue<String, Alarm>> stateResults = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, IntermediateMonolog>> stateResults = outputTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("Active", stateResults.get(0).value.getState().name());
+        Assert.assertEquals("Active", stateResults.get(0).value.getActivation().getState().name());
 
 
-        Alarm mono2 = Alarm.newBuilder(mono1).build();
+        IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
-        mono2.getOverrides().setShelved(new ShelvedOverride(false, 12345l, ShelvedReason.Other, null));
+        mono2.getActivation().getOverrides().setShelved(new ShelvedOverride(false, 12345l, ShelvedReason.Other, null));
 
         inputTopic.pipeInput("alarm1", mono2);
 
         stateResults = outputTopic.readKeyValuesToList();
 
         System.err.println("\n\nFinal State:");
-        for(KeyValue<String, Alarm> pass: stateResults) {
+        for(KeyValue<String, IntermediateMonolog> pass: stateResults) {
             System.err.println(pass);
         }
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("NormalContinuousShelved", stateResults.get(0).value.getState().name());
+        Assert.assertEquals("NormalContinuousShelved", stateResults.get(0).value.getActivation().getState().name());
     }
 }

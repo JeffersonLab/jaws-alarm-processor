@@ -18,7 +18,7 @@ public class EffectiveRegistrationRuleTest {
     private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
     private TestInputTopic<String, AlarmClass> inputTopicClasses;
     private TestOutputTopic<String, AlarmRegistration> outputTopicEffective;
-    private TestOutputTopic<String, Alarm> outputTopicMonolog;
+    private TestOutputTopic<String, IntermediateMonolog> outputTopicMonolog;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;

@@ -31,7 +31,7 @@ public class OneShotRule extends ProcessingRule {
     String overridesOutputTopic;
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -66,22 +66,22 @@ public class OneShotRule extends ProcessingRule {
         OVERRIDE_KEY_SERDE.configure(config, true);
         OVERRIDE_VALUE_SERDE.configure(config, false);
 
-        final KTable<String, Alarm> monologTable = builder.table(inputTopic,
+        final KTable<String, IntermediateMonolog> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
-        final KStream<String, Alarm> monologStream = monologTable.toStream();
+        final KStream<String, IntermediateMonolog> monologStream = monologTable.toStream();
 
-        KStream<String, Alarm> oneshotOverrideMonolog = monologStream.filter(new Predicate<String, Alarm>() {
+        KStream<String, IntermediateMonolog> oneshotOverrideMonolog = monologStream.filter(new Predicate<String, IntermediateMonolog>() {
             @Override
-            public boolean test(String key, Alarm value) {
+            public boolean test(String key, IntermediateMonolog value) {
                 log.debug("Filtering: " + key + ", value: " + value);
-                return value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
+                return value.getActivation().getOverrides().getShelved() != null && value.getActivation().getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, Alarm, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<OverriddenAlarmKey, AlarmOverrideUnion> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, Alarm value) {
+            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
                 return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Shelved), null);
             }
         });
@@ -98,7 +98,7 @@ public class OneShotRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, Alarm> passthrough = monologStream.transform(
+        final KStream<String, IntermediateMonolog> passthrough = monologStream.transform(
                 new OneShotRule.MsgTransformerFactory(storeBuilder.name()),
                 Named.as("OneShotTransitionProcessor"),
                 storeBuilder.name());
@@ -109,7 +109,7 @@ public class OneShotRule extends ProcessingRule {
         return builder.build();
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, Alarm, KeyValue<String, Alarm>> {
+    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
 
         private final String storeName;
 
@@ -128,8 +128,8 @@ public class OneShotRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, Alarm, KeyValue<String, Alarm>> get() {
-            return new Transformer<String, Alarm, KeyValue<String, Alarm>>() {
+        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
+            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
                 private KeyValueStore<String, String> store;
                 private ProcessorContext context;
 
@@ -141,13 +141,13 @@ public class OneShotRule extends ProcessingRule {
                 }
 
                 @Override
-                public KeyValue<String, Alarm> transform(String key, Alarm value) {
+                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
                     log.debug("Processing key = " + key + ", value = " + value);
 
                     boolean unshelving = false;
 
                     // Skip the filter unless oneshot is set
-                    if(value.getOverrides().getShelved() != null && value.getOverrides().getShelved().getOneshot()) {
+                    if(value.getActivation().getOverrides().getShelved() != null && value.getActivation().getOverrides().getShelved().getOneshot()) {
 
                         // Check if already unshelving in-progress
                         unshelving = store.get(key) != null;

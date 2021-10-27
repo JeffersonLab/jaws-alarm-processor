@@ -42,7 +42,7 @@ public class EffectiveRegistrationRule extends ProcessingRule {
     public static final SpecificAvroSerde<AlarmRegistration> EFFECTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<Alarm> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public EffectiveRegistrationRule(String inputTopicClasses, String inputTopicRegistered, String outputTopicEffective, String outputTopicMonolog) {
         super(null, null);
@@ -80,23 +80,23 @@ public class EffectiveRegistrationRule extends ProcessingRule {
         final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicRegistered,
                 Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
 
-        KTable<String, Alarm> classesAndRegistered = registeredTable.leftJoin(classesTable,
+        KTable<String, IntermediateMonolog> classesAndRegistered = registeredTable.leftJoin(classesTable,
                 AlarmRegistration::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
-                .filter(new Predicate<String, Alarm>() {
+                .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
-                    public boolean test(String key, Alarm value) {
+                    public boolean test(String key, IntermediateMonolog value) {
                         log.debug("\n\nREGISTERED-CLASS JOIN RESULT: key: " + key + "value: " + value);
                         return true;
                     }
                 });
 
-        final KStream<String, Alarm> withHeaders = classesAndRegistered.toStream()
+        final KStream<String, IntermediateMonolog> withHeaders = classesAndRegistered.toStream()
                 .transform(new MonologAddHeadersFactory());
 
-        KStream<String, AlarmRegistration> effective = withHeaders.mapValues(new ValueMapper<Alarm, AlarmRegistration>() {
+        KStream<String, AlarmRegistration> effective = withHeaders.mapValues(new ValueMapper<IntermediateMonolog, AlarmRegistration>() {
             @Override
-            public AlarmRegistration apply(Alarm value) {
-                return value.getEffectiveRegistration();
+            public AlarmRegistration apply(IntermediateMonolog value) {
+                return value.getRegistration().getCalculated();
             }
         });
 
@@ -135,24 +135,33 @@ public class EffectiveRegistrationRule extends ProcessingRule {
         return effectiveRegistered;
     }
 
-    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, Alarm> {
+    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, IntermediateMonolog> {
 
-        public Alarm apply(AlarmRegistration registered, AlarmClass clazz) {
+        public IntermediateMonolog apply(AlarmRegistration registered, AlarmClass clazz) {
 
             //System.err.println("class joiner: " + registered);
 
-            AlarmRegistration effectiveRegistered = computeEffectiveRegistration(registered, clazz);
+            AlarmRegistration calculated = computeEffectiveRegistration(registered, clazz);
 
-            Alarm alarm = Alarm.newBuilder()
-                    .setRegistration(registered)
+            EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                     .setClass$(clazz)
-                    .setEffectiveRegistration(effectiveRegistered)
+                    .setActual(registered)
+                    .setCalculated(calculated)
+                    .build();
+
+            EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
+                    .setActual(null)
                     .setOverrides(new AlarmOverrideSet())
-                    .setTransitions(new ProcessorTransitions())
                     .setState(AlarmState.Normal)
                     .build();
 
-            return alarm;
+            IntermediateMonolog monolog = IntermediateMonolog.newBuilder()
+                    .setRegistration(effectiveReg)
+                    .setActivation(effectiveAct)
+                    .setTransitions(new ProcessorTransitions())
+                    .build();
+
+            return monolog;
         }
     }
 
