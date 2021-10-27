@@ -15,7 +15,8 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class EffectiveStateRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, IntermediateMonolog> inputTopic;
-    private TestOutputTopic<String, IntermediateMonolog> outputTopic;
+    private TestOutputTopic<String, EffectiveActivation> effectiveActivationTopic;
+    private TestOutputTopic<String, EffectiveAlarm> effectiveAlarmTopic;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
     private AlarmClass class1;
@@ -26,7 +27,7 @@ public class EffectiveStateRuleTest {
 
     @Before
     public void setup() {
-        final EffectiveStateRule rule = new EffectiveStateRule("monolog", "alarms");
+        final EffectiveStateRule rule = new EffectiveStateRule("monolog", "effective-activations", "effective-alarms");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -38,7 +39,8 @@ public class EffectiveStateRuleTest {
 
         // setup test topics
         inputTopic = testDriver.createInputTopic(rule.inputTopic, EffectiveStateRule.MONOLOG_KEY_SERDE.serializer(), EffectiveStateRule.MONOLOG_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(rule.outputTopic, EffectiveStateRule.MONOLOG_KEY_SERDE.deserializer(), EffectiveStateRule.MONOLOG_VALUE_SERDE.deserializer());
+        effectiveActivationTopic = testDriver.createOutputTopic(rule.effectiveActivationTopic, EffectiveStateRule.EFFECTIVE_ACTIVATION_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_ACTIVATION_VALUE_SERDE.deserializer());
+        effectiveAlarmTopic = testDriver.createOutputTopic(rule.effectiveAlarmTopic, EffectiveStateRule.EFFECTIVE_ALARM_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_ALARM_VALUE_SERDE.deserializer());
         registered1 = new AlarmRegistration();
         registered2 = new AlarmRegistration();
 
@@ -98,7 +100,7 @@ public class EffectiveStateRuleTest {
         mono1.getTransitions().setTransitionToActive(false);
 
         inputTopic.pipeInput("alarm1", mono1);
-        List<KeyValue<String, IntermediateMonolog>> stateResults = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, EffectiveAlarm>> stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, stateResults.size());
         Assert.assertEquals("Normal", stateResults.get(0).value.getActivation().getState().name());
@@ -111,10 +113,10 @@ public class EffectiveStateRuleTest {
         mono1.getTransitions().setLatching(true);
 
         inputTopic.pipeInput("alarm1", mono1);
-        List<KeyValue<String, IntermediateMonolog>> stateResults = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, EffectiveAlarm>> stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         System.err.println("\n\nInitial State:");
-        for(KeyValue<String, IntermediateMonolog> pass: stateResults) {
+        for(KeyValue<String, EffectiveAlarm> pass: stateResults) {
             System.err.println(pass);
         }
 
@@ -122,7 +124,7 @@ public class EffectiveStateRuleTest {
 
         Assert.assertEquals(1, stateResults.size());
 
-        KeyValue<String, IntermediateMonolog> passResult = stateResults.get(0);
+        KeyValue<String, EffectiveAlarm> passResult = stateResults.get(0);
 
         Assert.assertEquals("ActiveLatched", passResult.value.getActivation().getState().name());
 
@@ -132,10 +134,10 @@ public class EffectiveStateRuleTest {
 
         inputTopic.pipeInput("alarm1", mono2);
 
-        stateResults = outputTopic.readKeyValuesToList();
+        stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         System.err.println("\n\nFinal State:");
-        for(KeyValue<String, IntermediateMonolog> pass: stateResults) {
+        for(KeyValue<String, EffectiveAlarm> pass: stateResults) {
             System.err.println(pass);
         }
 
@@ -148,7 +150,7 @@ public class EffectiveStateRuleTest {
         mono1.setActivation(effectiveAct);
 
         inputTopic.pipeInput("alarm1", mono1);
-        List<KeyValue<String, IntermediateMonolog>> stateResults = outputTopic.readKeyValuesToList();
+        List<KeyValue<String, EffectiveAlarm>> stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, stateResults.size());
         Assert.assertEquals("Active", stateResults.get(0).value.getActivation().getState().name());
@@ -160,10 +162,10 @@ public class EffectiveStateRuleTest {
 
         inputTopic.pipeInput("alarm1", mono2);
 
-        stateResults = outputTopic.readKeyValuesToList();
+        stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         System.err.println("\n\nFinal State:");
-        for(KeyValue<String, IntermediateMonolog> pass: stateResults) {
+        for(KeyValue<String, EffectiveAlarm> pass: stateResults) {
             System.err.println(pass);
         }
 

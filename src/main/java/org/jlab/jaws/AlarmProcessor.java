@@ -27,7 +27,7 @@ public class AlarmProcessor {
         rules.add(new ActivationRule("intermediate-registration", "alarm-activations", "alarm-overrides", "intermediate-activation"));
         rules.add(new LatchRule("intermediate-activation", "intermediate-latch", "alarm-overrides"));
         rules.add(new OneShotRule("intermediate-latch", "intermediate-oneshot", "alarm-overrides"));
-        rules.add(new EffectiveStateRule("intermediate-oneshot", "effective-alarms"));
+        rules.add(new EffectiveStateRule("intermediate-oneshot", "effective-activations", "effective-alarms"));
 
         final CountDownLatch latch = new CountDownLatch(1);
 

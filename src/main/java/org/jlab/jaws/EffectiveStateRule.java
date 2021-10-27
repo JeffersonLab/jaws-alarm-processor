@@ -8,9 +8,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.StoreBuilder;
-import org.apache.kafka.streams.state.Stores;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,16 +23,25 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
  */
 public class EffectiveStateRule extends ProcessingRule {
 
+    String effectiveAlarmTopic;
+    String effectiveActivationTopic;
+
     private static final Logger log = LoggerFactory.getLogger(EffectiveStateRule.class);
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
-    public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final Serdes.StringSerde EFFECTIVE_ALARM_KEY_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<EffectiveAlarm> EFFECTIVE_ALARM_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public EffectiveStateRule(String inputTopic, String outputTopic) {
-        super(inputTopic, outputTopic);
+    public static final Serdes.StringSerde EFFECTIVE_ACTIVATION_KEY_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<EffectiveActivation> EFFECTIVE_ACTIVATION_VALUE_SERDE = new SpecificAvroSerde<>();
+
+    public EffectiveStateRule(String inputTopic, String effectiveActivationTopic, String effectiveAlarmTopic) {
+        super(inputTopic, null);
+
+        this.effectiveActivationTopic = effectiveActivationTopic;
+        this.effectiveAlarmTopic = effectiveAlarmTopic;
     }
 
     @Override
@@ -56,6 +62,8 @@ public class EffectiveStateRule extends ProcessingRule {
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
 
         MONOLOG_VALUE_SERDE.configure(config, false);
+        EFFECTIVE_ALARM_VALUE_SERDE.configure(config, false);
+        EFFECTIVE_ACTIVATION_VALUE_SERDE.configure(config, false);
 
         final KTable<String, IntermediateMonolog> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
@@ -63,12 +71,33 @@ public class EffectiveStateRule extends ProcessingRule {
         final KStream<String, IntermediateMonolog> monologStream = monologTable.toStream();
 
 
-        final KStream<String, IntermediateMonolog> output = monologStream.transform(
+        final KStream<String, IntermediateMonolog> calculated = monologStream.transform(
                 new EffectiveStateRule.MsgTransformerFactory(),
                 Named.as("EffectiveStateTransitionProcessor"));
 
-        output.to(outputTopic, Produced.as("EFFECTIVE-STATE-OUTPUT")
-                .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
+        final KStream<String, EffectiveAlarm> effectiveAlarms = calculated.mapValues(new ValueMapper<IntermediateMonolog, EffectiveAlarm>() {
+            @Override
+            public EffectiveAlarm apply(IntermediateMonolog value) {
+                return EffectiveAlarm.newBuilder()
+                        .setRegistration(value.getRegistration())
+                        .setActivation(value.getActivation())
+                        .build();
+            }
+        });
+
+        effectiveAlarms.to(effectiveAlarmTopic, Produced.as("EFFECTIVE-ALARMS-OUTPUT")
+                .with(EFFECTIVE_ALARM_KEY_SERDE, EFFECTIVE_ALARM_VALUE_SERDE));
+
+        final KStream<String, EffectiveActivation> effectiveActivations = calculated.mapValues(new ValueMapper<IntermediateMonolog, EffectiveActivation>() {
+            @Override
+            public EffectiveActivation apply(IntermediateMonolog value) {
+                return EffectiveActivation.newBuilder(value.getActivation())
+                        .build();
+            }
+        });
+
+        effectiveActivations.to(effectiveActivationTopic, Produced.as("EFFECTIVE-ACTIVATIONS-OUTPUT")
+                .with(EFFECTIVE_ACTIVATION_KEY_SERDE, EFFECTIVE_ACTIVATION_VALUE_SERDE));
 
         return builder.build();
     }
