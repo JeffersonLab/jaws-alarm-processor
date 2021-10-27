@@ -25,7 +25,7 @@ public class RegistrationRuleTest {
 
     @Before
     public void setup() {
-        final RegistrationRule rule = new RegistrationRule("registered-classes", "registered-alarms", "effective-registrations", "intermediate-registration-processed");
+        final RegistrationRule rule = new RegistrationRule("alarm-classes", "alarm-registrations", "effective-registrations", "intermediate-registration");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -97,6 +97,26 @@ public class RegistrationRuleTest {
         KeyValue<String, AlarmRegistration> result1 = results.get(0);
 
         AlarmRegistration expectedRegistration = RegistrationRule.computeEffectiveRegistration(registered1, class1);
+
+        Assert.assertEquals("alarm1", result1.key);
+        Assert.assertEquals(expectedRegistration, result1.value);
+    }
+
+    @Test
+    public void noClass() {
+        inputTopicRegistered.pipeInput("alarm1", registered1);
+        List<KeyValue<String, AlarmRegistration>> results = outputTopicEffective.readKeyValuesToList();
+
+        System.err.println("\n\n\n");
+        for(KeyValue<String, AlarmRegistration> result: results) {
+            System.err.println(result);
+        }
+
+        Assert.assertEquals(1, results.size());
+
+        KeyValue<String, AlarmRegistration> result1 = results.get(0);
+
+        AlarmRegistration expectedRegistration = registered1;
 
         Assert.assertEquals("alarm1", result1.key);
         Assert.assertEquals(expectedRegistration, result1.value);
