@@ -7,13 +7,12 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
-public class EffectiveRegistrationRuleTest {
+public class RegistrationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
     private TestInputTopic<String, AlarmClass> inputTopicClasses;
@@ -26,7 +25,7 @@ public class EffectiveRegistrationRuleTest {
 
     @Before
     public void setup() {
-        final EffectiveRegistrationRule rule = new EffectiveRegistrationRule("registered-classes", "registered-alarms", "effective-registrations", "intermediate-registration-processed");
+        final RegistrationRule rule = new RegistrationRule("registered-classes", "registered-alarms", "effective-registrations", "intermediate-registration-processed");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -34,10 +33,10 @@ public class EffectiveRegistrationRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicClasses = testDriver.createInputTopic(rule.inputTopicClasses, EffectiveRegistrationRule.INPUT_KEY_CLASSES_SERDE.serializer(), EffectiveRegistrationRule.INPUT_VALUE_CLASSES_SERDE.serializer());
-        inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicRegistered, EffectiveRegistrationRule.INPUT_KEY_REGISTERED_SERDE.serializer(), EffectiveRegistrationRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
-        outputTopicEffective = testDriver.createOutputTopic(rule.outputTopicEffective, EffectiveRegistrationRule.EFFECTIVE_KEY_SERDE.deserializer(), EffectiveRegistrationRule.EFFECTIVE_VALUE_SERDE.deserializer());
-        outputTopicMonolog = testDriver.createOutputTopic(rule.outputTopicMonolog, EffectiveRegistrationRule.MONOLOG_KEY_SERDE.deserializer(), EffectiveRegistrationRule.MONOLOG_VALUE_SERDE.deserializer());
+        inputTopicClasses = testDriver.createInputTopic(rule.inputTopicClasses, RegistrationRule.INPUT_KEY_CLASSES_SERDE.serializer(), RegistrationRule.INPUT_VALUE_CLASSES_SERDE.serializer());
+        inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicRegistered, RegistrationRule.INPUT_KEY_REGISTERED_SERDE.serializer(), RegistrationRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
+        outputTopicEffective = testDriver.createOutputTopic(rule.outputTopicEffective, RegistrationRule.EFFECTIVE_KEY_SERDE.deserializer(), RegistrationRule.EFFECTIVE_VALUE_SERDE.deserializer());
+        outputTopicMonolog = testDriver.createOutputTopic(rule.outputTopicMonolog, RegistrationRule.MONOLOG_KEY_SERDE.deserializer(), RegistrationRule.MONOLOG_VALUE_SERDE.deserializer());
 
 
         registered1 = new AlarmRegistration();
@@ -66,7 +65,7 @@ public class EffectiveRegistrationRuleTest {
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
 
-        effectiveRegistered1 = EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1);
+        effectiveRegistered1 = RegistrationRule.computeEffectiveRegistration(registered1, class1);
     }
 
     @After
@@ -97,7 +96,7 @@ public class EffectiveRegistrationRuleTest {
 
         KeyValue<String, AlarmRegistration> result1 = results.get(0);
 
-        AlarmRegistration expectedRegistration = EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1);
+        AlarmRegistration expectedRegistration = RegistrationRule.computeEffectiveRegistration(registered1, class1);
 
         Assert.assertEquals("alarm1", result1.key);
         Assert.assertEquals(expectedRegistration, result1.value);

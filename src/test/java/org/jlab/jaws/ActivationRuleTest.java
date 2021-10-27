@@ -13,7 +13,7 @@ import java.util.Properties;
 
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
-public class MonologRuleTest {
+public class ActivationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, IntermediateMonolog> inputTopicRegisteredMonolog;
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
@@ -31,7 +31,7 @@ public class MonologRuleTest {
 
     @Before
     public void setup() {
-        final MonologRule rule = new MonologRule("effective-registrations", "active-alarms", "overridden-alarms", "monolog");
+        final ActivationRule rule = new ActivationRule("effective-registrations", "active-alarms", "overridden-alarms", "monolog");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
@@ -39,10 +39,10 @@ public class MonologRuleTest {
         testDriver = new TopologyTestDriver(top, props);
 
         // setup test topics
-        inputTopicRegisteredMonolog = testDriver.createInputTopic(rule.inputTopicRegisteredMonolog, MonologRule.MONOLOG_KEY_SERDE.serializer(), MonologRule.MONOLOG_VALUE_SERDE.serializer());
-        inputTopicActive = testDriver.createInputTopic(rule.inputTopicActive, MonologRule.ACTIVE_KEY_SERDE.serializer(), MonologRule.ACTIVE_VALUE_SERDE.serializer());
-        inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, MonologRule.OVERRIDE_KEY_SERDE.serializer(), MonologRule.OVERRIDE_VALUE_SERDE.serializer());
-        outputTopic = testDriver.createOutputTopic(rule.outputTopic, MonologRule.MONOLOG_KEY_SERDE.deserializer(), MonologRule.MONOLOG_VALUE_SERDE.deserializer());
+        inputTopicRegisteredMonolog = testDriver.createInputTopic(rule.inputTopicRegisteredMonolog, ActivationRule.MONOLOG_KEY_SERDE.serializer(), ActivationRule.MONOLOG_VALUE_SERDE.serializer());
+        inputTopicActive = testDriver.createInputTopic(rule.inputTopicActive, ActivationRule.ACTIVE_KEY_SERDE.serializer(), ActivationRule.ACTIVE_VALUE_SERDE.serializer());
+        inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, ActivationRule.OVERRIDE_KEY_SERDE.serializer(), ActivationRule.OVERRIDE_VALUE_SERDE.serializer());
+        outputTopic = testDriver.createOutputTopic(rule.outputTopic, ActivationRule.MONOLOG_KEY_SERDE.deserializer(), ActivationRule.MONOLOG_VALUE_SERDE.deserializer());
 
         registered1 = new AlarmRegistration();
         registered2 = new AlarmRegistration();
@@ -70,7 +70,7 @@ public class MonologRuleTest {
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
 
-        effectiveRegistered1 = EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1);
+        effectiveRegistered1 = RegistrationRule.computeEffectiveRegistration(registered1, class1);
 
         active1 = new AlarmActivationUnion();
         active2 = new AlarmActivationUnion();
@@ -81,7 +81,7 @@ public class MonologRuleTest {
         effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
                 .setActual(registered1)
-                .setCalculated(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .setCalculated(RegistrationRule.computeEffectiveRegistration(registered1, class1))
                 .build();
 
         effectiveAct = EffectiveActivation.newBuilder()

@@ -70,7 +70,7 @@ public class EffectiveStateRuleTest {
         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
                 .setActual(registered1)
-                .setCalculated(EffectiveRegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .setCalculated(RegistrationRule.computeEffectiveRegistration(registered1, class1))
                 .build();
 
         effectiveAct = EffectiveActivation.newBuilder()

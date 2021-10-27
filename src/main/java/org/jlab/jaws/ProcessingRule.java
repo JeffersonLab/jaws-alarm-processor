@@ -91,40 +91,6 @@ public abstract class ProcessingRule {
         }
     }
 
-    public final class OverriddenAddHeadersFactory implements TransformerSupplier<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> {
-
-        /**
-         * Return a new {@link Transformer} instance.
-         *
-         * @return a new {@link Transformer} instance
-         */
-        @Override
-        public Transformer<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> get() {
-            return new Transformer<OverriddenAlarmKey, AlarmOverrideUnion, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
-                private ProcessorContext context;
-
-                @Override
-                public void init(ProcessorContext context) {
-                    this.context = context;
-                }
-
-                @Override
-                public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> transform(OverriddenAlarmKey key, AlarmOverrideUnion value) {
-                    log.debug("Handling message: {}={}", key, value);
-
-                    setHeaders(context);
-
-                    return new KeyValue<>(key, value);
-                }
-
-                @Override
-                public void close() {
-                    // Nothing to do
-                }
-            };
-        }
-    }
-
     public final class MonologAddHeadersFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
 
         /**

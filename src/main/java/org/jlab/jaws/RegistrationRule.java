@@ -8,9 +8,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.ProcessorContext;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.StoreBuilder;
-import org.apache.kafka.streams.state.Stores;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +20,9 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
  * Streams rule to join alarm classes with alarm registrations such that null fields in an alarm
  * registration are filled in with class defaults.
  */
-public class EffectiveRegistrationRule extends ProcessingRule {
+public class RegistrationRule extends ProcessingRule {
 
-    private static final Logger log = LoggerFactory.getLogger(EffectiveRegistrationRule.class);
+    private static final Logger log = LoggerFactory.getLogger(RegistrationRule.class);
 
     String inputTopicClasses;
     String inputTopicRegistered;
@@ -44,7 +41,7 @@ public class EffectiveRegistrationRule extends ProcessingRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public EffectiveRegistrationRule(String inputTopicClasses, String inputTopicRegistered, String outputTopicEffective, String outputTopicMonolog) {
+    public RegistrationRule(String inputTopicClasses, String inputTopicRegistered, String outputTopicEffective, String outputTopicMonolog) {
         super(null, null);
         this.inputTopicClasses = inputTopicClasses;
         this.inputTopicRegistered = inputTopicRegistered;

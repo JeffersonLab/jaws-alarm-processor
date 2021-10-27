@@ -20,13 +20,15 @@ import java.util.*;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 /**
- * Streams rule to join all the alarm topics into a single topic that is ordered (single partition) such that
- * processing can be done.   A store of the previous active record for each alarm is used to determine
+ * Streams rule to join the activation and override topics into a single topic that is ordered (single partition)
+ * such that processing can be done.
+ *
+ * A store of the previous active record for each alarm is used to determine
  * transitions from active to normal and back.
  */
-public class MonologRule extends ProcessingRule {
+public class ActivationRule extends ProcessingRule {
 
-    private static final Logger log = LoggerFactory.getLogger(MonologRule.class);
+    private static final Logger log = LoggerFactory.getLogger(ActivationRule.class);
 
     String inputTopicRegisteredMonolog;
     String inputTopicActive;
@@ -43,7 +45,7 @@ public class MonologRule extends ProcessingRule {
 
     public static final SpecificAvroSerde<OverrideList> OVERRIDE_LIST_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public MonologRule(String inputTopicRegisteredMonolog, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
+    public ActivationRule(String inputTopicRegisteredMonolog, String inputTopicActive, String inputTopicOverridden, String outputTopic) {
         super(null, outputTopic);
         this.inputTopicRegisteredMonolog = inputTopicRegisteredMonolog;
         this.inputTopicActive = inputTopicActive;
@@ -112,7 +114,7 @@ public class MonologRule extends ProcessingRule {
 
         // Ensure we always return non-null Alarm record and populate it with transition state
         final KStream<String, IntermediateMonolog> withTransitionState = plusOverrides.toStream()
-                .transform(new MonologRule.MsgTransformerFactory(storeBuilder.name()),
+                .transform(new ActivationRule.MsgTransformerFactory(storeBuilder.name()),
                         Named.as("ActiveTransitionStateProcessor"),
                         storeBuilder.name());
 
