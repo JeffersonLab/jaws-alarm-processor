@@ -16,7 +16,7 @@ public class RegistrationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
     private TestInputTopic<String, AlarmClass> inputTopicClasses;
-    private TestOutputTopic<String, AlarmRegistration> outputTopicEffective;
+    private TestOutputTopic<String, EffectiveRegistration> outputTopicEffective;
     private TestOutputTopic<String, IntermediateMonolog> outputTopicMonolog;
     private AlarmRegistration registered1;
     private AlarmRegistration registered2;
@@ -77,7 +77,7 @@ public class RegistrationRuleTest {
     public void count() {
         inputTopicClasses.pipeInput("base", class1);
         inputTopicRegistered.pipeInput("alarm1", registered2);
-        List<KeyValue<String, AlarmRegistration>> results = outputTopicEffective.readKeyValuesToList();
+        List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
     }
 
@@ -85,40 +85,40 @@ public class RegistrationRuleTest {
     public void content() {
         inputTopicClasses.pipeInput("base", class1);
         inputTopicRegistered.pipeInput("alarm1", registered1);
-        List<KeyValue<String, AlarmRegistration>> results = outputTopicEffective.readKeyValuesToList();
+        List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, AlarmRegistration> result: results) {
+        for(KeyValue<String, EffectiveRegistration> result: results) {
             System.err.println(result);
         }
 
         Assert.assertEquals(1, results.size());
 
-        KeyValue<String, AlarmRegistration> result1 = results.get(0);
+        KeyValue<String, EffectiveRegistration> result1 = results.get(0);
 
         AlarmRegistration expectedRegistration = RegistrationRule.computeEffectiveRegistration(registered1, class1);
 
         Assert.assertEquals("alarm1", result1.key);
-        Assert.assertEquals(expectedRegistration, result1.value);
+        Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
     }
 
     @Test
     public void noClass() {
         inputTopicRegistered.pipeInput("alarm1", registered1);
-        List<KeyValue<String, AlarmRegistration>> results = outputTopicEffective.readKeyValuesToList();
+        List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
 
         System.err.println("\n\n\n");
-        for(KeyValue<String, AlarmRegistration> result: results) {
+        for(KeyValue<String, EffectiveRegistration> result: results) {
             System.err.println(result);
         }
 
         Assert.assertEquals(1, results.size());
 
-        KeyValue<String, AlarmRegistration> result1 = results.get(0);
+        KeyValue<String, EffectiveRegistration> result1 = results.get(0);
 
         AlarmRegistration expectedRegistration = registered1;
 
         Assert.assertEquals("alarm1", result1.key);
-        Assert.assertEquals(expectedRegistration, result1.value);
+        Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
     }
 }

@@ -36,7 +36,7 @@ public class RegistrationRule extends ProcessingRule {
     public static final SpecificAvroSerde<AlarmClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde EFFECTIVE_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<AlarmRegistration> EFFECTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<EffectiveRegistration> EFFECTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
@@ -90,10 +90,10 @@ public class RegistrationRule extends ProcessingRule {
         final KStream<String, IntermediateMonolog> withHeaders = classesAndRegistered.toStream()
                 .transform(new MonologAddHeadersFactory());
 
-        KStream<String, AlarmRegistration> effective = withHeaders.mapValues(new ValueMapper<IntermediateMonolog, AlarmRegistration>() {
+        KStream<String, EffectiveRegistration> effective = withHeaders.mapValues(new ValueMapper<IntermediateMonolog, EffectiveRegistration>() {
             @Override
-            public AlarmRegistration apply(IntermediateMonolog value) {
-                return value.getRegistration().getCalculated();
+            public EffectiveRegistration apply(IntermediateMonolog value) {
+                return EffectiveRegistration.newBuilder(value.getRegistration()).build();
             }
         });
 
