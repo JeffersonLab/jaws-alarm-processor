@@ -1,8 +1,8 @@
 #!/bin/bash
 
-echo "------------------------------------------------------"
-echo "Step 1: Waiting for Schema Registry to start listening"
-echo "------------------------------------------------------"
+echo "----------------------------------------------"
+echo "Step 1: Waiting for a JAWS Schema in Registry "
+echo "----------------------------------------------"
 url=$SCHEMA_REGISTRY
 echo "waiting on: $url"
 while [ $(curl -s -o /dev/null -w %{http_code} $url/subjects/alarm-overrides-value/versions) -ne 200 ] ; do
