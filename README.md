@@ -1,4 +1,4 @@
-# jaws-alarm-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-alarm-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-alarm-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-alarm-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-alarm-processor)
+# jaws-effective-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-effective-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-effective-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-effective-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-effective-processor)
 A set of connected [Kafka Streams](https://kafka.apache.org/documentation/streams/) apps for [JAWS](https://github.com/JeffersonLab/jaws) that process classes and overrides and compute effective state.  
 
 The normalized JAWS topics are joined to create an unnormalized series of pipelined topics with all relevant alarm data consolidated into a single record per alarm key and stricter alarm state ordering guarantees.
@@ -14,19 +14,19 @@ Automated overrides include:
 The alarm processor merges alarm classes with alarm registrations to compute an effective registration for each alarm.
 
 ---
- - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-alarm-processor#quick-start-with-compose)
- - [Build](https://github.com/JeffersonLab/jaws-alarm-processor#build)
- - [Configure](https://github.com/JeffersonLab/jaws-alarm-processor#configure)
- - [Deploy](https://github.com/JeffersonLab/jaws-alarm-processor#deploy)
- - [Docker](https://github.com/JeffersonLab/jaws-alarm-processor#docker)
- - [See Also](https://github.com/JeffersonLab/jaws-alarm-processor#see-also)
+ - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-effective-processor#quick-start-with-compose)
+ - [Build](https://github.com/JeffersonLab/jaws-effective-processor#build)
+ - [Configure](https://github.com/JeffersonLab/jaws-effective-processor#configure)
+ - [Deploy](https://github.com/JeffersonLab/jaws-effective-processor#deploy)
+ - [Docker](https://github.com/JeffersonLab/jaws-effective-processor#docker)
+ - [See Also](https://github.com/JeffersonLab/jaws-effective-processor#see-also)
  ---
 
 ## Quick Start with Compose 
 1. Grab project
 ```
-git clone https://github.com/JeffersonLab/jaws-alarm-processor
-cd jaws-alarm-processor
+git clone https://github.com/JeffersonLab/jaws-effective-processor
+cd jaws-effective-processor
 ```
 2. Launch Docker
 ```
@@ -41,14 +41,14 @@ docker exec -it jaws /scripts/client/list-overridden.py --monitor
 docker exec -it jaws /scripts/client/set-overridden.py --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 
-More [Examples](https://github.com/JeffersonLab/jaws-alarm-processor/wiki/Examples)
+More [Examples](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Examples)
 
 ## Build
 This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
 
 ```
-git clone https://github.com/JeffersonLab/jaws-alarm-processor
-cd jaws-alarm-processor
+git clone https://github.com/JeffersonLab/jaws-effective-processor
+cd jaws-effective-processor
 gradlew build
 ```
 **Note**: If you do not already have Gradle installed, it will be installed automatically by the wrapper script included in the source
@@ -75,24 +75,24 @@ The Kafka Streams app is a regular Java application, and start scripts are creat
 gradlew assembleDist
 ```
 
-[Releases](https://github.com/JeffersonLab/jaws-alarm-processor/releases)
+[Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases)
 
 Launch with:
 
 UNIX:
 ```
-bin/jaws-alarm-processor
+bin/jaws-effective-processor
 ```
 Windows:
 ```
-bin/jaws-alarm-processor.bat
+bin/jaws-effective-processor.bat
 ```
 
 ## Docker
 ```
-docker pull slominskir/jaws-alarm-processor
+docker pull slominskir/jaws-effective-processor
 ```
-Image hosted on [DockerHub](https://hub.docker.com/r/slominskir/jaws-alarm-processor)
+Image hosted on [DockerHub](https://hub.docker.com/r/slominskir/jaws-effective-processor)
 
 ## See Also
-   - [Developer Notes](https://github.com/JeffersonLab/jaws-alarm-processor/wiki/Developer-Notes)
+   - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
