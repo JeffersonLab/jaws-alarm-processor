@@ -93,7 +93,12 @@ public class RegistrationRule extends ProcessingRule {
         KStream<String, EffectiveRegistration> effective = withHeaders.mapValues(new ValueMapper<IntermediateMonolog, EffectiveRegistration>() {
             @Override
             public EffectiveRegistration apply(IntermediateMonolog value) {
-                return EffectiveRegistration.newBuilder(value.getRegistration()).build();
+                EffectiveRegistration result = null;
+
+                if(value != null) {
+                    result = EffectiveRegistration.newBuilder(value.getRegistration()).build();
+                }
+                return result;
             }
         });
 

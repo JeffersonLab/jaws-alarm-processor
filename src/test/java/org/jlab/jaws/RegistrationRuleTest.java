@@ -121,4 +121,24 @@ public class RegistrationRuleTest {
         Assert.assertEquals("alarm1", result1.key);
         Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
     }
+
+    @Test
+    public void tomestoneRegistration() {
+        inputTopicClasses.pipeInput("base", class1);
+        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicRegistered.pipeInput("alarm1", null);
+        List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
+
+        System.err.println("\n\n\n");
+        for(KeyValue<String, EffectiveRegistration> result: results) {
+            System.err.println(result);
+        }
+
+        Assert.assertEquals(2, results.size());
+
+        KeyValue<String, EffectiveRegistration> result2 = results.get(1);
+
+        Assert.assertEquals("alarm1", result2.key);
+        Assert.assertNull(result2.value);
+    }
 }
