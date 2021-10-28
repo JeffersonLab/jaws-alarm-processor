@@ -10,8 +10,6 @@ import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.kstream.TransformerSupplier;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.jlab.jaws.entity.IntermediateMonolog;
-import org.jlab.jaws.entity.AlarmOverrideUnion;
-import org.jlab.jaws.entity.OverriddenAlarmKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +43,7 @@ public abstract class ProcessingRule {
         registry = (registry == null) ? "http://localhost:8081" : registry;
 
         final Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-effective-processor");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0); // Disable caching
         props.put(SCHEMA_REGISTRY_URL_CONFIG, registry);
@@ -84,7 +82,7 @@ public abstract class ProcessingRule {
             }
 
             headers.add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
-            headers.add("producer", "jaws-alarm-processor".getBytes(StandardCharsets.UTF_8));
+            headers.add("producer", "jaws-effective-processor".getBytes(StandardCharsets.UTF_8));
             headers.add("host", host.getBytes(StandardCharsets.UTF_8));
         } else {
             log.debug("Headers are unavailable");

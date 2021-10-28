@@ -10,5 +10,5 @@ while [ $(curl -s -o /dev/null -w %{http_code} $url/subjects/alarm-overrides-val
   sleep 5
 done
 
-export JAWS_ALARM_PROCESSOR_OPTS=-Dlog.dir=/opt/jaws-alarm-processor/logs
-/opt/jaws-alarm-processor/bin/jaws-alarm-processor
+export JAWS_ALARM_PROCESSOR_OPTS=-Dlog.dir=/opt/jaws-effective-processor/logs
+/opt/jaws-effective-processor/bin/jaws-effective-processor

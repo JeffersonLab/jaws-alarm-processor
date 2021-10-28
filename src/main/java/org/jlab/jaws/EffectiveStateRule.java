@@ -48,7 +48,7 @@ public class EffectiveStateRule extends ProcessingRule {
     public Properties constructProperties() {
         final Properties props = super.constructProperties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor-state");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-effective-processor-state");
 
         return props;
     }

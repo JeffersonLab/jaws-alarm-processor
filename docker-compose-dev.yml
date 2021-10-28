@@ -2,7 +2,7 @@
 version: '3.8'
 
 services:
-  alarms:
+  effective:
     build:
       context: .
       dockerfile: Dockerfile
@@ -10,4 +10,4 @@ services:
         - CUSTOM_CRT_URL=http://pki.jlab.org/JLabCA.crt
     volumes:
       - ./docker-entrypoint.sh:/docker-entrypoint.sh
-      - ./build/install/jaws-alarm-processor:/opt/jaws-alarm-processor
+      - ./build/install/jaws-effective-processor:/opt/jaws-effective-processor

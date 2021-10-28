@@ -53,7 +53,7 @@ public class RegistrationRule extends ProcessingRule {
     public Properties constructProperties() {
         final Properties props = super.constructProperties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor-registration");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-effective-processor-registration");
 
         return props;
     }

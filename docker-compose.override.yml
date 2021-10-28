@@ -2,5 +2,5 @@
 version: '3.8'
 
 services:
-  alarms:
-    image: slominskir/jaws-alarm-processor:2.1.0
+  effective:
+    image: slominskir/jaws-effective-processor:2.1.0

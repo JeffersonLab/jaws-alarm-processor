@@ -48,7 +48,7 @@ public class LatchRule extends ProcessingRule {
     public Properties constructProperties() {
         final Properties props = super.constructProperties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor-latch");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-effective-processor-latch");
 
         return props;
     }

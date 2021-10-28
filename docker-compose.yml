@@ -45,13 +45,10 @@ services:
       BOOTSTRAP_SERVERS: "kafka:9092"
       SCHEMA_REGISTRY: "http://registry:8081"
 
-  alarms:
-    hostname: alarms
-    container_name: alarms
+  effective:
+    hostname: effective
+    container_name: effective
     depends_on:
-      - zookeeper
-      - kafka
-      - registry
       - jaws
     environment:
       BOOTSTRAP_SERVERS: "kafka:9092"

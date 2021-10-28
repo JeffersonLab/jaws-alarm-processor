@@ -49,7 +49,7 @@ public class MaskRule extends ProcessingRule {
     public Properties constructProperties() {
         final Properties props = super.constructProperties();
 
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-alarm-processor-mask");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-effective-processor-mask");
 
         return props;
     }
