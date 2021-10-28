@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'jaws-alarm-processor'
+rootProject.name = 'jaws-effective-processor'
