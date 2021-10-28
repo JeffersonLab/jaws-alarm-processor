@@ -8,8 +8,8 @@ import java.util.Set;
 import java.util.concurrent.*;
 
 
-public class AlarmProcessor {
-    private static final Logger log = LoggerFactory.getLogger(AlarmProcessor.class);
+public class EffectiveProcessor {
+    private static final Logger log = LoggerFactory.getLogger(EffectiveProcessor.class);
     private static final Set<ProcessingRule> rules = new HashSet<>();
 
     /**

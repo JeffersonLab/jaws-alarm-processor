@@ -46,7 +46,7 @@ jar {
 }
 
 application {
-    mainClassName = 'org.jlab.jaws.AlarmProcessor'
+    mainClassName = 'org.jlab.jaws.EffectiveProcessor'
 }
 
 build {
