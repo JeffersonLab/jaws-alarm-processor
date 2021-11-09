@@ -3,15 +3,7 @@ A set of connected [Kafka Streams](https://kafka.apache.org/documentation/stream
 
 The normalized JAWS topics are joined to create an unnormalized series of pipelined topics with all relevant alarm data consolidated into a single record per alarm key and stricter alarm state ordering guarantees.
 
-Automated overrides include:
-- **shelve expiration** - Remove Shelved override with an expiration timer
-- **one-shot shelve** - Remove Shelved override when alarm is no longer active for overrides configured as one-shot
-- **on-delay** - Add an OnDelayed override for alarms registered as on-delayed and removes the OnDelay after expiration
-- **off-delay** - Add an OffDelayed override for alarms registered as off-delayed and remove the OffDelay after expiration
-- **latch** - Add a Latched override for alarms registered as latching that become active
-- **mask** - Add a Masked override to an alarm with an active parent alarm and removes the Masked override when the parent alarm is no longer active
-
-The alarm processor merges alarm classes with alarm registrations to compute an effective registration for each alarm.
+[Full Explanation](https://github.com/JeffersonLab/jaws/wiki/Software-Design#alarm-processor)
 
 ---
  - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-effective-processor#quick-start-with-compose)
