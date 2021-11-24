@@ -31,7 +31,7 @@ docker exec -it jaws /scripts/client/list-overridden.py --monitor
 docker exec -it jaws /scripts/client/set-overridden.py --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 
-More [Examples](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Examples)
+More [Examples](https://github.com/JeffersonLab/jaws/wiki/Usage-Examples)
 
 ## Build
 This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
