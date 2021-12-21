@@ -17,8 +17,8 @@ public class EffectiveStateRuleTest {
     private TestInputTopic<String, IntermediateMonolog> inputTopic;
     private TestOutputTopic<String, EffectiveActivation> effectiveActivationTopic;
     private TestOutputTopic<String, EffectiveAlarm> effectiveAlarmTopic;
-    private AlarmRegistration registered1;
-    private AlarmRegistration registered2;
+    private AlarmInstance instance1;
+    private AlarmInstance instance2;
     private AlarmClass class1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
@@ -41,16 +41,16 @@ public class EffectiveStateRuleTest {
         inputTopic = testDriver.createInputTopic(rule.inputTopic, EffectiveStateRule.MONOLOG_KEY_SERDE.serializer(), EffectiveStateRule.MONOLOG_VALUE_SERDE.serializer());
         effectiveActivationTopic = testDriver.createOutputTopic(rule.effectiveActivationTopic, EffectiveStateRule.EFFECTIVE_ACTIVATION_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_ACTIVATION_VALUE_SERDE.deserializer());
         effectiveAlarmTopic = testDriver.createOutputTopic(rule.effectiveAlarmTopic, EffectiveStateRule.EFFECTIVE_ALARM_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_ALARM_VALUE_SERDE.deserializer());
-        registered1 = new AlarmRegistration();
-        registered2 = new AlarmRegistration();
+        instance1 = new AlarmInstance();
+        instance2 = new AlarmInstance();
 
-        registered1.setClass$("base");
-        registered1.setProducer(new SimpleProducer());
-        registered1.setLatching(true);
+        instance1.setClass$("base");
+        instance1.setProducer(new SimpleProducer());
+        instance1.setLatching(true);
 
-        registered2.setClass$("base");
-        registered2.setProducer(new SimpleProducer());
-        registered2.setLatching(false);
+        instance2.setClass$("base");
+        instance2.setProducer(new SimpleProducer());
+        instance2.setLatching(false);
 
         class1 = new AlarmClass();
         class1.setLatching(true);
@@ -71,8 +71,8 @@ public class EffectiveStateRuleTest {
 
         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
-                .setActual(registered1)
-                .setCalculated(RegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .setActual(instance1)
+                .setCalculated(RegistrationRule.computeEffectiveRegistration(instance1, class1))
                 .build();
 
         effectiveAct = EffectiveActivation.newBuilder()

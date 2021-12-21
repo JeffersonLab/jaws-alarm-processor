@@ -17,8 +17,8 @@ public class OneShotRuleTest {
     private TestInputTopic<String, IntermediateMonolog> inputTopicMonolog;
     private TestOutputTopic<String, IntermediateMonolog> outputPassthroughTopic;
     private TestOutputTopic<OverriddenAlarmKey, AlarmOverrideUnion> outputOverrideTopic;
-    private AlarmRegistration registered1;
-    private AlarmRegistration registered2;
+    private AlarmInstance instance1;
+    private AlarmInstance instance2;
     private AlarmClass class1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
@@ -38,16 +38,16 @@ public class OneShotRuleTest {
         outputPassthroughTopic = testDriver.createOutputTopic(rule.outputTopic, OneShotRule.MONOLOG_KEY_SERDE.deserializer(), OneShotRule.MONOLOG_VALUE_SERDE.deserializer());
         outputOverrideTopic = testDriver.createOutputTopic(rule.overridesOutputTopic, OneShotRule.OVERRIDE_KEY_SERDE.deserializer(), OneShotRule.OVERRIDE_VALUE_SERDE.deserializer());
 
-        registered1 = new AlarmRegistration();
-        registered2 = new AlarmRegistration();
+        instance1 = new AlarmInstance();
+        instance2 = new AlarmInstance();
 
-        registered1.setClass$("base");
-        registered1.setProducer(new SimpleProducer());
-        registered1.setLatching(true);
+        instance1.setClass$("base");
+        instance1.setProducer(new SimpleProducer());
+        instance1.setLatching(true);
 
-        registered2.setClass$("base");
-        registered2.setProducer(new SimpleProducer());
-        registered2.setLatching(false);
+        instance2.setClass$("base");
+        instance2.setProducer(new SimpleProducer());
+        instance2.setLatching(false);
 
         class1 = new AlarmClass();
         class1.setLatching(true);
@@ -68,8 +68,8 @@ public class OneShotRuleTest {
 
         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
-                .setActual(registered1)
-                .setCalculated(RegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .setActual(instance1)
+                .setCalculated(RegistrationRule.computeEffectiveRegistration(instance1, class1))
                 .build();
 
         EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()

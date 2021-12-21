@@ -14,14 +14,14 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 
 public class RegistrationRuleTest {
     private TopologyTestDriver testDriver;
-    private TestInputTopic<String, AlarmRegistration> inputTopicRegistered;
+    private TestInputTopic<String, AlarmInstance> inputTopicRegistered;
     private TestInputTopic<String, AlarmClass> inputTopicClasses;
     private TestOutputTopic<String, EffectiveRegistration> outputTopicEffective;
     private TestOutputTopic<String, IntermediateMonolog> outputTopicMonolog;
-    private AlarmRegistration registered1;
-    private AlarmRegistration registered2;
+    private AlarmInstance instance1;
+    private AlarmInstance instance2;
     private AlarmClass class1;
-    private AlarmRegistration effectiveRegistered1;
+    private AlarmInstance effectiveRegistered1;
 
     @Before
     public void setup() {
@@ -34,21 +34,21 @@ public class RegistrationRuleTest {
 
         // setup test topics
         inputTopicClasses = testDriver.createInputTopic(rule.inputTopicClasses, RegistrationRule.INPUT_KEY_CLASSES_SERDE.serializer(), RegistrationRule.INPUT_VALUE_CLASSES_SERDE.serializer());
-        inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicRegistered, RegistrationRule.INPUT_KEY_REGISTERED_SERDE.serializer(), RegistrationRule.INPUT_VALUE_REGISTERED_SERDE.serializer());
+        inputTopicRegistered = testDriver.createInputTopic(rule.inputTopicInstances, RegistrationRule.INPUT_KEY_INSTANCES_SERDE.serializer(), RegistrationRule.INPUT_VALUE_INSTANCES_SERDE.serializer());
         outputTopicEffective = testDriver.createOutputTopic(rule.outputTopicEffective, RegistrationRule.EFFECTIVE_KEY_SERDE.deserializer(), RegistrationRule.EFFECTIVE_VALUE_SERDE.deserializer());
         outputTopicMonolog = testDriver.createOutputTopic(rule.outputTopicMonolog, RegistrationRule.MONOLOG_KEY_SERDE.deserializer(), RegistrationRule.MONOLOG_VALUE_SERDE.deserializer());
 
 
-        registered1 = new AlarmRegistration();
-        registered2 = new AlarmRegistration();
+        instance1 = new AlarmInstance();
+        instance2 = new AlarmInstance();
 
-        registered1.setClass$("base");
-        registered1.setProducer(new SimpleProducer());
-        registered1.setLatching(true);
+        instance1.setClass$("base");
+        instance1.setProducer(new SimpleProducer());
+        instance1.setLatching(true);
 
-        registered2.setClass$("base");
-        registered2.setProducer(new SimpleProducer());
-        registered2.setLatching(false);
+        instance2.setClass$("base");
+        instance2.setProducer(new SimpleProducer());
+        instance2.setLatching(false);
 
         class1 = new AlarmClass();
         class1.setLatching(true);
@@ -65,7 +65,7 @@ public class RegistrationRuleTest {
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
 
-        effectiveRegistered1 = RegistrationRule.computeEffectiveRegistration(registered1, class1);
+        effectiveRegistered1 = RegistrationRule.computeEffectiveRegistration(instance1, class1);
     }
 
     @After
@@ -76,7 +76,7 @@ public class RegistrationRuleTest {
     @Test
     public void count() {
         inputTopicClasses.pipeInput("base", class1);
-        inputTopicRegistered.pipeInput("alarm1", registered2);
+        inputTopicRegistered.pipeInput("alarm1", instance2);
         List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
     }
@@ -84,7 +84,7 @@ public class RegistrationRuleTest {
     @Test
     public void content() {
         inputTopicClasses.pipeInput("base", class1);
-        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicRegistered.pipeInput("alarm1", instance1);
         List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
 
         System.err.println("\n\n\n");
@@ -96,7 +96,7 @@ public class RegistrationRuleTest {
 
         KeyValue<String, EffectiveRegistration> result1 = results.get(0);
 
-        AlarmRegistration expectedRegistration = RegistrationRule.computeEffectiveRegistration(registered1, class1);
+        AlarmInstance expectedRegistration = RegistrationRule.computeEffectiveRegistration(instance1, class1);
 
         Assert.assertEquals("alarm1", result1.key);
         Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
@@ -104,7 +104,7 @@ public class RegistrationRuleTest {
 
     @Test
     public void noClass() {
-        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicRegistered.pipeInput("alarm1", instance1);
         List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
 
         System.err.println("\n\n\n");
@@ -116,7 +116,7 @@ public class RegistrationRuleTest {
 
         KeyValue<String, EffectiveRegistration> result1 = results.get(0);
 
-        AlarmRegistration expectedRegistration = registered1;
+        AlarmInstance expectedRegistration = instance1;
 
         Assert.assertEquals("alarm1", result1.key);
         Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
@@ -125,7 +125,7 @@ public class RegistrationRuleTest {
     @Test
     public void tomestoneRegistration() {
         inputTopicClasses.pipeInput("base", class1);
-        inputTopicRegistered.pipeInput("alarm1", registered1);
+        inputTopicRegistered.pipeInput("alarm1", instance1);
         inputTopicRegistered.pipeInput("alarm1", null);
         List<KeyValue<String, EffectiveRegistration>> results = outputTopicEffective.readKeyValuesToList();
 

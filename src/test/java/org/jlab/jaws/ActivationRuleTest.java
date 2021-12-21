@@ -19,10 +19,10 @@ public class ActivationRuleTest {
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
     private TestOutputTopic<String, IntermediateMonolog> outputTopic;
-    private AlarmRegistration registered1;
-    private AlarmRegistration registered2;
+    private AlarmInstance registered1;
+    private AlarmInstance registered2;
     private AlarmClass class1;
-    private AlarmRegistration effectiveRegistered1;
+    private AlarmInstance effectiveRegistered1;
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
     private IntermediateMonolog registeredMonolog1;
@@ -44,8 +44,8 @@ public class ActivationRuleTest {
         inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, ActivationRule.OVERRIDE_KEY_SERDE.serializer(), ActivationRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(rule.outputTopic, ActivationRule.MONOLOG_KEY_SERDE.deserializer(), ActivationRule.MONOLOG_VALUE_SERDE.deserializer());
 
-        registered1 = new AlarmRegistration();
-        registered2 = new AlarmRegistration();
+        registered1 = new AlarmInstance();
+        registered2 = new AlarmInstance();
 
         registered1.setClass$("base");
         registered1.setProducer(new SimpleProducer());

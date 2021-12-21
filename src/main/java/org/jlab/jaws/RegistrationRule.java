@@ -17,22 +17,22 @@ import java.util.*;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 /**
- * Streams rule to join alarm classes with alarm registrations such that null fields in an alarm
- * registration are filled in with class defaults.
+ * Streams rule to join alarm classes with alarm instances such that null fields in an alarm
+ * instance are filled in with class defaults.
  */
 public class RegistrationRule extends ProcessingRule {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationRule.class);
 
     String inputTopicClasses;
-    String inputTopicRegistered;
+    String inputTopicInstances;
     String outputTopicEffective;
     String outputTopicMonolog;
 
-    public static final Serdes.StringSerde INPUT_KEY_REGISTERED_SERDE = new Serdes.StringSerde();
+    public static final Serdes.StringSerde INPUT_KEY_INSTANCES_SERDE = new Serdes.StringSerde();
     public static final Serdes.StringSerde INPUT_KEY_CLASSES_SERDE = new Serdes.StringSerde();
 
-    public static final SpecificAvroSerde<AlarmRegistration> INPUT_VALUE_REGISTERED_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmInstance> INPUT_VALUE_INSTANCES_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmClass> INPUT_VALUE_CLASSES_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde EFFECTIVE_KEY_SERDE = new Serdes.StringSerde();
@@ -41,10 +41,10 @@ public class RegistrationRule extends ProcessingRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public RegistrationRule(String inputTopicClasses, String inputTopicRegistered, String outputTopicEffective, String outputTopicMonolog) {
+    public RegistrationRule(String inputTopicClasses, String inputTopicInstances, String outputTopicEffective, String outputTopicMonolog) {
         super(null, null);
         this.inputTopicClasses = inputTopicClasses;
-        this.inputTopicRegistered = inputTopicRegistered;
+        this.inputTopicInstances = inputTopicInstances;
         this.outputTopicEffective = outputTopicEffective;
         this.outputTopicMonolog = outputTopicMonolog;
     }
@@ -66,7 +66,7 @@ public class RegistrationRule extends ProcessingRule {
         Map<String, String> config = new HashMap<>();
         config.put(SCHEMA_REGISTRY_URL_CONFIG, props.getProperty(SCHEMA_REGISTRY_URL_CONFIG));
 
-        INPUT_VALUE_REGISTERED_SERDE.configure(config, false);
+        INPUT_VALUE_INSTANCES_SERDE.configure(config, false);
         INPUT_VALUE_CLASSES_SERDE.configure(config, false);
 
         EFFECTIVE_VALUE_SERDE.configure(config, false);
@@ -74,11 +74,11 @@ public class RegistrationRule extends ProcessingRule {
 
         final KTable<String, AlarmClass> classesTable = builder.table(inputTopicClasses,
                 Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
-        final KTable<String, AlarmRegistration> registeredTable = builder.table(inputTopicRegistered,
-                Consumed.as("Registered-Table").with(INPUT_KEY_REGISTERED_SERDE, INPUT_VALUE_REGISTERED_SERDE));
+        final KTable<String, AlarmInstance> registeredTable = builder.table(inputTopicInstances,
+                Consumed.as("Instances-Table").with(INPUT_KEY_INSTANCES_SERDE, INPUT_VALUE_INSTANCES_SERDE));
 
         KTable<String, IntermediateMonolog> classesAndRegistered = registeredTable.leftJoin(classesTable,
-                AlarmRegistration::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
+                AlarmInstance::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
                 .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
                     public boolean test(String key, IntermediateMonolog value) {
@@ -111,8 +111,8 @@ public class RegistrationRule extends ProcessingRule {
         return builder.build();
     }
 
-    public static AlarmRegistration computeEffectiveRegistration(AlarmRegistration registered, AlarmClass clazz) {
-        AlarmRegistration effectiveRegistered = AlarmRegistration.newBuilder(registered).build();
+    public static AlarmInstance computeEffectiveRegistration(AlarmInstance registered, AlarmClass clazz) {
+        AlarmInstance effectiveRegistered = AlarmInstance.newBuilder(registered).build();
         if(clazz != null) {
             if (effectiveRegistered.getCategory() == null) effectiveRegistered.setCategory(clazz.getCategory());
             if (effectiveRegistered.getCorrectiveaction() == null)
@@ -137,13 +137,13 @@ public class RegistrationRule extends ProcessingRule {
         return effectiveRegistered;
     }
 
-    private final class AlarmClassJoiner implements ValueJoiner<AlarmRegistration, AlarmClass, IntermediateMonolog> {
+    private final class AlarmClassJoiner implements ValueJoiner<AlarmInstance, AlarmClass, IntermediateMonolog> {
 
-        public IntermediateMonolog apply(AlarmRegistration registered, AlarmClass clazz) {
+        public IntermediateMonolog apply(AlarmInstance registered, AlarmClass clazz) {
 
             //System.err.println("class joiner: " + registered);
 
-            AlarmRegistration calculated = computeEffectiveRegistration(registered, clazz);
+            AlarmInstance calculated = computeEffectiveRegistration(registered, clazz);
 
             EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                     .setClass$(clazz)
@@ -164,40 +164,6 @@ public class RegistrationRule extends ProcessingRule {
                     .build();
 
             return monolog;
-        }
-    }
-
-    public final class AlarmRegistrationAddHeadersFactory implements TransformerSupplier<String, AlarmRegistration, KeyValue<String, AlarmRegistration>> {
-
-        /**
-         * Return a new {@link Transformer} instance.
-         *
-         * @return a new {@link Transformer} instance
-         */
-        @Override
-        public Transformer<String, AlarmRegistration, KeyValue<String, AlarmRegistration>> get() {
-            return new Transformer<String, AlarmRegistration, KeyValue<String, AlarmRegistration>>() {
-                private ProcessorContext context;
-
-                @Override
-                public void init(ProcessorContext context) {
-                    this.context = context;
-                }
-
-                @Override
-                public KeyValue<String, AlarmRegistration> transform(String key, AlarmRegistration value) {
-                    log.debug("Handling message: {}={}", key, value);
-
-                    setHeaders(context);
-
-                    return new KeyValue<>(key, value);
-                }
-
-                @Override
-                public void close() {
-                    // Nothing to do
-                }
-            };
         }
     }
 }
