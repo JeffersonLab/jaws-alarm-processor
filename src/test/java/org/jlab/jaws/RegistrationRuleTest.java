@@ -25,7 +25,7 @@ public class RegistrationRuleTest {
 
     @Before
     public void setup() {
-        final RegistrationRule rule = new RegistrationRule("alarm-classes", "alarm-registrations", "effective-registrations", "intermediate-registration");
+        final RegistrationRule rule = new RegistrationRule("alarm-classes", "alarm-instances", "effective-registrations", "intermediate-registration");
 
         final Properties props = rule.constructProperties();
         props.put(SCHEMA_REGISTRY_URL_CONFIG, "mock://testing");
