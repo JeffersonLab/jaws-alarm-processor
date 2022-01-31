@@ -135,8 +135,7 @@ public class ActivationRule extends ProcessingRule {
 
             EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                     .setClass$(null)
-                    .setActual(null)
-                    .setCalculated(null)
+                    .setInstance(null)
                     .build();
 
             EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
@@ -152,9 +151,8 @@ public class ActivationRule extends ProcessingRule {
                     .build();
 
             if(registered != null) {
-                result.getRegistration().setActual(registered.getRegistration().getActual());
+                result.getRegistration().setInstance(registered.getRegistration().getInstance());
                 result.getRegistration().setClass$(registered.getRegistration().getClass$());
-                result.getRegistration().setCalculated(registered.getRegistration().getCalculated());
             }
 
             return result;

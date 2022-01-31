@@ -111,44 +111,15 @@ public class RegistrationRule extends ProcessingRule {
         return builder.build();
     }
 
-    public static AlarmInstance computeEffectiveRegistration(AlarmInstance registered, AlarmClass clazz) {
-        AlarmInstance effectiveRegistered = AlarmInstance.newBuilder(registered).build();
-        if(clazz != null) {
-            if (effectiveRegistered.getCategory() == null) effectiveRegistered.setCategory(clazz.getCategory());
-            if (effectiveRegistered.getCorrectiveaction() == null)
-                effectiveRegistered.setCorrectiveaction(clazz.getCorrectiveaction());
-            if (effectiveRegistered.getLatching() == null) effectiveRegistered.setLatching(clazz.getLatching());
-            if (effectiveRegistered.getFilterable() == null)
-                effectiveRegistered.setFilterable(clazz.getFilterable());
-            if (effectiveRegistered.getLocation() == null) effectiveRegistered.setLocation(clazz.getLocation());
-            if (effectiveRegistered.getMaskedby() == null) effectiveRegistered.setMaskedby(clazz.getMaskedby());
-            if (effectiveRegistered.getOffdelayseconds() == null)
-                effectiveRegistered.setOffdelayseconds(clazz.getOffdelayseconds());
-            if (effectiveRegistered.getOndelayseconds() == null)
-                effectiveRegistered.setOndelayseconds(clazz.getOndelayseconds());
-            if (effectiveRegistered.getPointofcontactusername() == null)
-                effectiveRegistered.setPointofcontactusername(clazz.getPointofcontactusername());
-            if (effectiveRegistered.getPriority() == null) effectiveRegistered.setPriority(clazz.getPriority());
-            if (effectiveRegistered.getRationale() == null) effectiveRegistered.setRationale(clazz.getRationale());
-            if (effectiveRegistered.getScreenpath() == null)
-                effectiveRegistered.setScreenpath(clazz.getScreenpath());
-        }
-
-        return effectiveRegistered;
-    }
-
     private final class AlarmClassJoiner implements ValueJoiner<AlarmInstance, AlarmClass, IntermediateMonolog> {
 
-        public IntermediateMonolog apply(AlarmInstance registered, AlarmClass clazz) {
+        public IntermediateMonolog apply(AlarmInstance instance, AlarmClass clazz) {
 
             //System.err.println("class joiner: " + registered);
 
-            AlarmInstance calculated = computeEffectiveRegistration(registered, clazz);
-
             EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                     .setClass$(clazz)
-                    .setActual(registered)
-                    .setCalculated(calculated)
+                    .setInstance(instance)
                     .build();
 
             EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()

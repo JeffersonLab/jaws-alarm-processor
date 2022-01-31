@@ -75,7 +75,7 @@ public class LatchRule extends ProcessingRule {
             @Override
             public boolean test(String key, IntermediateMonolog value) {
                 log.debug("Filtering: " + key + ", value: " + value);
-                return value.getRegistration().getCalculated() != null && Boolean.TRUE.equals(value.getRegistration().getCalculated().getLatching()) && value.getTransitions().getTransitionToActive();
+                return value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatching()) && value.getTransitions().getTransitionToActive();
             }
         });
 
@@ -142,10 +142,10 @@ public class LatchRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = {}, value = \n\tReg: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getCalculated(),value.getActivation().getActual(),value.getActivation().getOverrides(),value.getTransitions());
+                    log.debug("Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getActivation().getActual(),value.getActivation().getOverrides(),value.getTransitions());
 
                     // Skip the filter unless latching is registered
-                    if(value.getRegistration().getCalculated() != null && Boolean.TRUE.equals(value.getRegistration().getCalculated().getLatching())) {
+                    if(value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatching())) {
 
                         // Check if already latching in-progress
                         boolean latching = store.get(key) != null;

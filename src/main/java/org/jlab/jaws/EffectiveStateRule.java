@@ -129,7 +129,7 @@ public class EffectiveStateRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = {}, value = \n\tReg: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getCalculated(),value.getActivation(),value.getActivation().getOverrides(),value.getTransitions());
+                    log.debug("Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getActivation(),value.getActivation().getOverrides(),value.getTransitions());
 
                     // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 

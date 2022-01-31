@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.time.Duration;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -19,8 +20,8 @@ public class ActivationRuleTest {
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
     private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
     private TestOutputTopic<String, IntermediateMonolog> outputTopic;
-    private AlarmInstance registered1;
-    private AlarmInstance registered2;
+    private AlarmInstance instance1;
+    private AlarmInstance instance2;
     private AlarmClass class1;
     private AlarmInstance effectiveRegistered1;
     private AlarmActivationUnion active1;
@@ -44,33 +45,28 @@ public class ActivationRuleTest {
         inputTopicOverridden = testDriver.createInputTopic(rule.inputTopicOverridden, ActivationRule.OVERRIDE_KEY_SERDE.serializer(), ActivationRule.OVERRIDE_VALUE_SERDE.serializer());
         outputTopic = testDriver.createOutputTopic(rule.outputTopic, ActivationRule.MONOLOG_KEY_SERDE.deserializer(), ActivationRule.MONOLOG_VALUE_SERDE.deserializer());
 
-        registered1 = new AlarmInstance();
-        registered2 = new AlarmInstance();
+        instance1 = new AlarmInstance();
+        instance2 = new AlarmInstance();
 
-        registered1.setClass$("base");
-        registered1.setProducer(new SimpleProducer());
-        registered1.setLatching(true);
+        instance1.setClass$("base");
+        instance1.setProducer(new SimpleProducer());
+        instance1.setLocation(Arrays.asList("NL"));
 
-        registered2.setClass$("base");
-        registered2.setProducer(new SimpleProducer());
-        registered2.setLatching(false);
+        instance2.setClass$("base");
+        instance2.setProducer(new SimpleProducer());
+        instance2.setLocation(Arrays.asList("NL"));
 
         class1 = new AlarmClass();
         class1.setLatching(true);
-        class1.setCategory(AlarmCategory.CAMAC);
+        class1.setCategory("CAMAC");
         class1.setFilterable(true);
         class1.setCorrectiveaction("fix it");
-        class1.setLocation(AlarmLocation.A4);
         class1.setPriority(AlarmPriority.P3_MINOR);
-        class1.setScreenpath("/tmp");
         class1.setPointofcontactusername("tester");
         class1.setRationale("because");
 
-        class1.setMaskedby("alarm1");
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
-
-        effectiveRegistered1 = RegistrationRule.computeEffectiveRegistration(registered1, class1);
 
         active1 = new AlarmActivationUnion();
         active2 = new AlarmActivationUnion();
@@ -80,8 +76,7 @@ public class ActivationRuleTest {
 
         effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
-                .setActual(registered1)
-                .setCalculated(RegistrationRule.computeEffectiveRegistration(registered1, class1))
+                .setInstance(instance1)
                 .build();
 
         effectiveAct = EffectiveActivation.newBuilder()

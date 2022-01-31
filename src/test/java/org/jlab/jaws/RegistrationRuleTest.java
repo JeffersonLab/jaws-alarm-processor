@@ -7,6 +7,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -44,28 +45,23 @@ public class RegistrationRuleTest {
 
         instance1.setClass$("base");
         instance1.setProducer(new SimpleProducer());
-        instance1.setLatching(true);
+        instance1.setLocation(Arrays.asList("NL"));
 
         instance2.setClass$("base");
         instance2.setProducer(new SimpleProducer());
-        instance2.setLatching(false);
+        instance2.setLocation(Arrays.asList("NL"));
 
         class1 = new AlarmClass();
         class1.setLatching(true);
-        class1.setCategory(AlarmCategory.CAMAC);
+        class1.setCategory("CAMAC");
         class1.setFilterable(true);
         class1.setCorrectiveaction("fix it");
-        class1.setLocation(AlarmLocation.A4);
         class1.setPriority(AlarmPriority.P3_MINOR);
-        class1.setScreenpath("/tmp");
         class1.setPointofcontactusername("tester");
         class1.setRationale("because");
 
-        class1.setMaskedby("alarm1");
         class1.setOffdelayseconds(5l);
         class1.setOndelayseconds(5l);
-
-        effectiveRegistered1 = RegistrationRule.computeEffectiveRegistration(instance1, class1);
     }
 
     @After
@@ -96,10 +92,7 @@ public class RegistrationRuleTest {
 
         KeyValue<String, EffectiveRegistration> result1 = results.get(0);
 
-        AlarmInstance expectedRegistration = RegistrationRule.computeEffectiveRegistration(instance1, class1);
-
         Assert.assertEquals("alarm1", result1.key);
-        Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
     }
 
     @Test
@@ -116,10 +109,7 @@ public class RegistrationRuleTest {
 
         KeyValue<String, EffectiveRegistration> result1 = results.get(0);
 
-        AlarmInstance expectedRegistration = instance1;
-
         Assert.assertEquals("alarm1", result1.key);
-        Assert.assertEquals(expectedRegistration, result1.value.getCalculated());
     }
 
     @Test
