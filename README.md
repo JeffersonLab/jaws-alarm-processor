@@ -62,21 +62,19 @@ Environment Variables
 | SCHEMA_REGISTRY | URL to Confluent Schema Registry; example: `http://registry:8081` |
 
 ## Build
-This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
+This [Java 17](https://adoptium.net/) project (compiled to Java 11 bytecode) uses the [Gradle 7](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
 
 ```
 git clone https://github.com/JeffersonLab/jaws-effective-processor
 cd jaws-effective-processor
 gradlew build
 ```
+
 **Note**: If you do not already have Gradle installed, it will be installed automatically by the wrapper script included in the source
 
-**Note**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
+**Note for JLab On-Site Users**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
 
-**Note**: When developing the app you can mount the build artifact into the container by substituting the `docker-compose up` command with:
-```
-docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
-```
+**See**: [Docker Development Quick Reference](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c#development-quick-reference)
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
