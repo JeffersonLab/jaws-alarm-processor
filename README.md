@@ -5,10 +5,9 @@ Read more about [Overrides and Effective State](https://github.com/JeffersonLab/
 
 ---
  - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-effective-processor#quick-start-with-compose)
- - [Build](https://github.com/JeffersonLab/jaws-effective-processor#build)
+ - [Install](https://github.com/JeffersonLab/jaws-effective-processor#install) 
  - [Configure](https://github.com/JeffersonLab/jaws-effective-processor#configure)
- - [Deploy](https://github.com/JeffersonLab/jaws-effective-processor#deploy)
- - [Docker](https://github.com/JeffersonLab/jaws-effective-processor#docker)
+ - [Build](https://github.com/JeffersonLab/jaws-effective-processor#build) 
  - [See Also](https://github.com/JeffersonLab/jaws-effective-processor#see-also)
  ---
 
@@ -30,35 +29,11 @@ docker exec -it jaws /scripts/client/list-overrides.py --monitor
 ```
 docker exec -it jaws /scripts/client/set-override.py --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
+**See**: [Docker Compose Strategy](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c)
 
-More [Usage Examples](https://github.com/JeffersonLab/jaws/wiki/Usage-Examples)
+**See**: More [Usage Examples](https://github.com/JeffersonLab/jaws/wiki/Usage-Examples)
 
-## Build
-This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
-
-```
-git clone https://github.com/JeffersonLab/jaws-effective-processor
-cd jaws-effective-processor
-gradlew build
-```
-**Note**: If you do not already have Gradle installed, it will be installed automatically by the wrapper script included in the source
-
-**Note**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
-
-**Note**: When developing the app you can mount the build artifact into the container by substituting the `docker-compose up` command with:
-```
-docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
-```
-
-## Configure
-Environment Variables
-
-| Name | Description |
-|---|---|
-| BOOTSTRAP_SERVERS | Comma-separated list of host and port pairs pointing to a Kafka server to bootstrap the client connection to a Kafka Cluser; example: `kafka:9092` |
-| SCHEMA_REGISTRY | URL to Confluent Schema Registry; example: `http://registry:8081` |
-
-## Deploy
+## Install
 The Kafka Streams app is a regular Java application, and start scripts are created and dependencies collected by the Gradle distribution targets:
 
 ```
@@ -78,11 +53,30 @@ Windows:
 bin/jaws-effective-processor.bat
 ```
 
-## Docker
+## Configure
+Environment Variables
+
+| Name | Description |
+|---|---|
+| BOOTSTRAP_SERVERS | Comma-separated list of host and port pairs pointing to a Kafka server to bootstrap the client connection to a Kafka Cluser; example: `kafka:9092` |
+| SCHEMA_REGISTRY | URL to Confluent Schema Registry; example: `http://registry:8081` |
+
+## Build
+This [Java 11](https://adoptopenjdk.net/) project uses the [Gradle 6](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
+
 ```
-docker pull slominskir/jaws-effective-processor
+git clone https://github.com/JeffersonLab/jaws-effective-processor
+cd jaws-effective-processor
+gradlew build
 ```
-Image hosted on [DockerHub](https://hub.docker.com/r/slominskir/jaws-effective-processor)
+**Note**: If you do not already have Gradle installed, it will be installed automatically by the wrapper script included in the source
+
+**Note**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
+
+**Note**: When developing the app you can mount the build artifact into the container by substituting the `docker-compose up` command with:
+```
+docker-compose -f docker-compose.yml -f docker-compose-dev.yml up
+```
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
