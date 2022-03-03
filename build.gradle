@@ -2,18 +2,19 @@ plugins {
     id 'java'
     id 'application'
     id 'distribution'
-    id 'com.github.davidmc24.gradle.plugin.avro' version '1.1.0'
     id 'com.github.jk1.dependency-license-report' version '1.16'
 }
 
 group 'org.jlab'
 version '3.3.0'
 
-ext.confluentVer = '6.0.2'
-ext.kafkaVer = '2.6.2'
+ext.confluentVer = '7.0.1'
+ext.kafkaVer = '3.1.0'
 
 tasks.withType(JavaCompile) {
-    options.compilerArgs += ["-Xlint:unchecked"]
+    options.release = 11
+    options.encoding = 'UTF-8'
+    options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
 }
 
 repositories {
@@ -31,7 +32,7 @@ repositories {
 dependencies {
     implementation "org.apache.kafka:kafka-streams:" + kafkaVer,
             "io.confluent:kafka-streams-avro-serde:" + confluentVer,
-            "org.apache.avro:avro:1.10.2",
+            "org.apache.avro:avro:1.11.0",
             "org.slf4j:slf4j-log4j12:1.7.30",
             "org.jlab:jaws-libj:1.9.0"
     testImplementation "org.apache.kafka:kafka-streams-test-utils:" + kafkaVer,
@@ -50,7 +51,7 @@ jar {
 }
 
 application {
-    mainClassName = 'org.jlab.jaws.EffectiveProcessor'
+    mainClass.set('org.jlab.jaws.EffectiveProcessor')
 }
 
 build {
