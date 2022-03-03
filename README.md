@@ -34,13 +34,13 @@ docker exec -it jaws /scripts/client/set-override.py --override Shelved alarm1 -
 **See**: More [Usage Examples](https://github.com/JeffersonLab/jaws/wiki/Usage-Examples)
 
 ## Install
+Download from [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) or build yourself.
+
 The Kafka Streams app is a regular Java application, and start scripts are created and dependencies collected by the Gradle distribution targets:
 
 ```
 gradlew assembleDist
 ```
-
-[Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases)
 
 Launch with:
 
