@@ -1,0 +1,28 @@
+services:
+  zookeeper:
+    extends:
+      file: build.yml
+      service: zookeeper
+
+  kafka:
+    extends:
+      file: build.yml
+      service: kafka
+
+  registry:
+    extends:
+      file: build.yml
+      service: registry
+
+  jaws:
+    extends:
+      file: build.yml
+      service: jaws
+
+  effective:
+    extends:
+      file: build.yml
+      service: effective
+    volumes:
+      - ./docker-entrypoint.sh:/docker-entrypoint.sh
+      - ./build/install/jaws-effective-processor:/opt/jaws-effective-processor

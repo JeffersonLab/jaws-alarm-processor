@@ -1,6 +1,3 @@
----
-version: '3.8'
-
 services:
   effective:
     image: slominskir/jaws-effective-processor:3.3.0
