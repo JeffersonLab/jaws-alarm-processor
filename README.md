@@ -19,7 +19,7 @@ cd jaws-effective-processor
 ```
 2. Launch Docker
 ```
-docker-compose up
+docker compose up
 ```
 3. Monitor for expiration tombstone message 
 ```
