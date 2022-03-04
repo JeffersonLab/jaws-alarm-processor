@@ -34,10 +34,11 @@ docker exec -it jaws /scripts/client/set-override.py --override Shelved alarm1 -
 **See**: More [Usage Examples](https://github.com/JeffersonLab/jaws/wiki/Usage-Examples)
 
 ## Install
-Download from [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) or build yourself.
+This application requires a Java 11+ JVM and standard library to run.
 
-The Kafka Streams app is a regular Java application, and start scripts are created and dependencies collected by the Gradle distribution targets:
+Download from [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) or [build](https://github.com/JeffersonLab/jaws-effective-processor#build) yourself.
 
+Start scripts are created and dependencies collected by the Gradle distribution target:
 ```
 gradlew assembleDist
 ```
@@ -62,7 +63,7 @@ Environment Variables
 | SCHEMA_REGISTRY | URL to Confluent Schema Registry; example: `http://registry:8081` |
 
 ## Build
-This [Java 17](https://adoptium.net/) project (compiled to Java 11 bytecode) uses the [Gradle 7](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
+This project is built with [Java 17](https://adoptium.net/) (compiled to Java 11 bytecode), and uses the [Gradle 7](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
 
 ```
 git clone https://github.com/JeffersonLab/jaws-effective-processor
