@@ -28,7 +28,6 @@ RUN if [ -z "${CUSTOM_CRT_URL}" ] ; then echo "No custom cert needed"; else \
        && wget -O /usr/local/share/ca-certificates/customcert.crt $CUSTOM_CRT_URL \
        && cat /usr/local/share/ca-certificates/customcert.crt >> /etc/ssl/certs/ca-certificates.crt \
        && keytool -import -alias custom -file /usr/local/share/ca-certificates/customcert.crt -cacerts -storepass changeit -noprompt \
-       && export OPTIONAL_CERT_ARG=--cert=/etc/ssl/certs/ca-certificates.crt \
     ; fi \
     && apk add --no-cache --update curl \
     && chown -R ${RUN_USER}:0 ${APP_HOME} \
