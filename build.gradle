@@ -6,7 +6,7 @@ plugins {
 }
 
 group 'org.jlab'
-version '3.3.0'
+version '3.4.0'
 
 ext.confluentVer = '7.0.1'
 ext.kafkaVer = '3.1.0'
