@@ -29,7 +29,7 @@ RUN if [ -z "${CUSTOM_CRT_URL}" ] ; then echo "No custom cert needed"; else \
        && cat /usr/local/share/ca-certificates/customcert.crt >> /etc/ssl/certs/ca-certificates.crt \
        && keytool -import -alias custom -file /usr/local/share/ca-certificates/customcert.crt -cacerts -storepass changeit -noprompt \
     ; fi \
-    && apk add --no-cache --update curl \
+    && apk add --no-cache --update curl libstdc++ \
     && chown -R ${RUN_USER}:0 ${APP_HOME} \
     && chmod -R g+rw ${APP_HOME}
 USER ${RUN_USER}
