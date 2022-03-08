@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 echo "----------------------------------------------"
 echo "Step 1: Waiting for a JAWS Schema in Registry "
@@ -11,4 +11,6 @@ while [ $(curl -s -o /dev/null -w %{http_code} $url/subjects/alarm-overrides-val
 done
 
 export JAWS_ALARM_PROCESSOR_OPTS=-Dlog.dir=/opt/jaws-effective-processor/logs
-/opt/jaws-effective-processor/bin/jaws-effective-processor
+/opt/jaws-effective-processor/bin/jaws-effective-processor &
+
+sleep infinity
