@@ -9,7 +9,7 @@ group 'org.jlab'
 version '3.4.0'
 
 ext.confluentVer = '7.0.1'
-ext.kafkaVer = '3.1.0'
+ext.kafkaVer = '3.0.0'
 
 tasks.withType(JavaCompile) {
     options.release = 11
