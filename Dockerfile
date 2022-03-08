@@ -1,4 +1,4 @@
-ARG BUILD_IMAGE=gradle:7.4-jdk17
+ARG BUILD_IMAGE=gradle:7.4-jdk17-alpine
 ARG RUN_IMAGE=eclipse-temurin:11-alpine
 
 ################## Stage 0
