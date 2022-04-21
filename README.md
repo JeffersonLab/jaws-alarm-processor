@@ -23,11 +23,11 @@ docker compose up
 ```
 3. Monitor for expiration tombstone message 
 ```
-docker exec -it jaws /scripts/client/list-overrides.py --monitor 
+docker exec -it jaws /scripts/client/list_overrides.py --monitor 
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec -it jaws /scripts/client/set-override.py --override Shelved alarm1 --reason Other --expirationseconds 5
+docker exec -it jaws /scripts/client/set_override.py --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 **See**: [Docker Compose Strategy](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c)
 
