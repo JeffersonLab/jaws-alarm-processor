@@ -1,5 +1,5 @@
 # jaws-effective-processor [![Java CI with Gradle](https://github.com/JeffersonLab/jaws-effective-processor/workflows/Java%20CI%20with%20Gradle/badge.svg)](https://github.com/JeffersonLab/jaws-effective-processor/actions?query=workflow%3A%22Java+CI+with+Gradle%22) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-effective-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-effective-processor)
-A set of connected [Kafka Streams](https://kafka.apache.org/documentation/streams/) apps for [JAWS](https://github.com/JeffersonLab/jaws) that process classes and overrides and compute effective state.  
+A set of connected [Kafka Streams](https://kafka.apache.org/documentation/streams/) apps for [JAWS](https://github.com/JeffersonLab/jaws) that process alarm registration and notification data and compute effective state.  
 
 Read more about [Overrides and Effective State](https://github.com/JeffersonLab/jaws/wiki/Overrides-and-Effective-State) and [Software Design](https://github.com/JeffersonLab/jaws/wiki/Software-Design#effective-processor).
 
