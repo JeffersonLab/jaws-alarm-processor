@@ -24,7 +24,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class EffectiveStateRule extends ProcessingRule {
 
     String effectiveAlarmTopic;
-    String effectiveActivationTopic;
+    String EffectiveNotificationTopic;
 
     private static final Logger log = LoggerFactory.getLogger(EffectiveStateRule.class);
 
@@ -34,13 +34,13 @@ public class EffectiveStateRule extends ProcessingRule {
     public static final Serdes.StringSerde EFFECTIVE_ALARM_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<EffectiveAlarm> EFFECTIVE_ALARM_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final Serdes.StringSerde EFFECTIVE_ACTIVATION_KEY_SERDE = new Serdes.StringSerde();
-    public static final SpecificAvroSerde<EffectiveActivation> EFFECTIVE_ACTIVATION_VALUE_SERDE = new SpecificAvroSerde<>();
+    public static final Serdes.StringSerde EFFECTIVE_NOTIFICATION_KEY_SERDE = new Serdes.StringSerde();
+    public static final SpecificAvroSerde<EffectiveNotification> EFFECTIVE_NOTIFICATION_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public EffectiveStateRule(String inputTopic, String effectiveActivationTopic, String effectiveAlarmTopic) {
+    public EffectiveStateRule(String inputTopic, String EffectiveNotificationTopic, String effectiveAlarmTopic) {
         super(inputTopic, null);
 
-        this.effectiveActivationTopic = effectiveActivationTopic;
+        this.EffectiveNotificationTopic = EffectiveNotificationTopic;
         this.effectiveAlarmTopic = effectiveAlarmTopic;
     }
 
@@ -63,7 +63,7 @@ public class EffectiveStateRule extends ProcessingRule {
 
         MONOLOG_VALUE_SERDE.configure(config, false);
         EFFECTIVE_ALARM_VALUE_SERDE.configure(config, false);
-        EFFECTIVE_ACTIVATION_VALUE_SERDE.configure(config, false);
+        EFFECTIVE_NOTIFICATION_VALUE_SERDE.configure(config, false);
 
         final KTable<String, IntermediateMonolog> monologTable = builder.table(inputTopic,
                 Consumed.as("Monolog-Table").with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
@@ -80,7 +80,7 @@ public class EffectiveStateRule extends ProcessingRule {
             public EffectiveAlarm apply(IntermediateMonolog value) {
                 return EffectiveAlarm.newBuilder()
                         .setRegistration(value.getRegistration())
-                        .setActivation(value.getActivation())
+                        .setNotification(value.getNotification())
                         .build();
             }
         });
@@ -88,16 +88,16 @@ public class EffectiveStateRule extends ProcessingRule {
         effectiveAlarms.to(effectiveAlarmTopic, Produced.as("EFFECTIVE-ALARMS-OUTPUT")
                 .with(EFFECTIVE_ALARM_KEY_SERDE, EFFECTIVE_ALARM_VALUE_SERDE));
 
-        final KStream<String, EffectiveActivation> effectiveActivations = calculated.mapValues(new ValueMapper<IntermediateMonolog, EffectiveActivation>() {
+        final KStream<String, EffectiveNotification> EffectiveNotifications = calculated.mapValues(new ValueMapper<IntermediateMonolog, EffectiveNotification>() {
             @Override
-            public EffectiveActivation apply(IntermediateMonolog value) {
-                return EffectiveActivation.newBuilder(value.getActivation())
+            public EffectiveNotification apply(IntermediateMonolog value) {
+                return EffectiveNotification.newBuilder(value.getNotification())
                         .build();
             }
         });
 
-        effectiveActivations.to(effectiveActivationTopic, Produced.as("EFFECTIVE-ACTIVATIONS-OUTPUT")
-                .with(EFFECTIVE_ACTIVATION_KEY_SERDE, EFFECTIVE_ACTIVATION_VALUE_SERDE));
+        EffectiveNotifications.to(EffectiveNotificationTopic, Produced.as("EFFECTIVE-ACTIVATIONS-OUTPUT")
+                .with(EFFECTIVE_NOTIFICATION_KEY_SERDE, EFFECTIVE_NOTIFICATION_VALUE_SERDE));
 
         return builder.build();
     }
@@ -129,52 +129,52 @@ public class EffectiveStateRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getActivation(),value.getActivation().getOverrides(),value.getTransitions());
+                    log.debug("Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getNotification(),value.getNotification().getOverrides(),value.getTransitions());
 
                     // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
                     AlarmState state = AlarmState.Normal;
 
-                    if(value.getActivation().getActual() != null) {
+                    if(value.getNotification().getActivation() != null) {
                         state = AlarmState.Active;
                     }
 
-                    if(value.getActivation().getOverrides().getOffdelayed() != null) {
+                    if(value.getNotification().getOverrides().getOffdelayed() != null) {
                         state = AlarmState.ActiveOffDelayed;
                     }
 
                     if(value.getTransitions().getLatching() ||
-                            value.getActivation().getOverrides().getLatched() != null) {
+                            value.getNotification().getOverrides().getLatched() != null) {
                         state = AlarmState.ActiveLatched;
                     }
 
-                    if(value.getActivation().getOverrides().getOndelayed() != null) {
+                    if(value.getNotification().getOverrides().getOndelayed() != null) {
                         state = AlarmState.NormalOnDelayed;
                     }
 
-                    if(value.getActivation().getOverrides().getShelved() != null &&
+                    if(value.getNotification().getOverrides().getShelved() != null &&
                             !value.getTransitions().getUnshelving()) {
 
-                        if(value.getActivation().getOverrides().getShelved().getOneshot()) {
+                        if(value.getNotification().getOverrides().getShelved().getOneshot()) {
                             state = AlarmState.NormalOneShotShelved;
                         } else {
                             state = AlarmState.NormalContinuousShelved;
                         }
                     }
 
-                    if(value.getActivation().getOverrides().getMasked() != null) {
+                    if(value.getNotification().getOverrides().getMasked() != null) {
                         state = AlarmState.NormalMasked;
                     }
 
-                    if(value.getActivation().getOverrides().getFiltered() != null) {
+                    if(value.getNotification().getOverrides().getFiltered() != null) {
                         state = AlarmState.NormalFiltered;
                     }
 
-                    if(value.getActivation().getOverrides().getDisabled() != null) {
+                    if(value.getNotification().getOverrides().getDisabled() != null) {
                         state = AlarmState.NormalDisabled;
                     }
 
-                    value.getActivation().setState(state);
+                    value.getNotification().setState(state);
 
                     return new KeyValue<>(key, value);
                 }

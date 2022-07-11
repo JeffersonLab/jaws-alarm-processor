@@ -33,7 +33,7 @@ public class LatchRule extends ProcessingRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde LATCH_STORE_KEY_SERDE = new Serdes.StringSerde();
@@ -75,14 +75,14 @@ public class LatchRule extends ProcessingRule {
             @Override
             public boolean test(String key, IntermediateMonolog value) {
                 log.debug("Filtering: " + key + ", value: " + value);
-                return value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatching()) && value.getTransitions().getTransitionToActive();
+                return value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatchable()) && value.getTransitions().getTransitionToActive();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<AlarmOverrideKey, AlarmOverrideUnion> latchOverrides = latchOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Latched), new AlarmOverrideUnion(new LatchedOverride()));
+            public KeyValue<AlarmOverrideKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
+                return new KeyValue<>(new AlarmOverrideKey(key, OverriddenAlarmType.Latched), new AlarmOverrideUnion(new LatchedOverride()));
             }
         });
 
@@ -142,16 +142,16 @@ public class LatchRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getActivation().getActual(),value.getActivation().getOverrides(),value.getTransitions());
+                    log.debug("Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getNotification().getActivation(),value.getNotification().getOverrides(),value.getTransitions());
 
                     // Skip the filter unless latching is registered
-                    if(value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatching())) {
+                    if(value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatchable())) {
 
                         // Check if already latching in-progress
                         boolean latching = store.get(key) != null;
 
                         // Check if latched
-                        boolean latched = value.getActivation().getOverrides().getLatched() != null;
+                        boolean latched = value.getNotification().getOverrides().getLatched() != null;
 
                         // Check if we need to latch
                         boolean needToLatch = value.getTransitions().getTransitionToActive();

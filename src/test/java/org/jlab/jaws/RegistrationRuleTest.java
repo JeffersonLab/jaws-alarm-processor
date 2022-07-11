@@ -43,16 +43,16 @@ public class RegistrationRuleTest {
         instance1 = new AlarmInstance();
         instance2 = new AlarmInstance();
 
-        instance1.setClass$("base");
-        instance1.setProducer(new SimpleProducer());
+        instance1.setAlarmclass("base");
+        instance1.setSource(new Source());
         instance1.setLocation(Arrays.asList("NL"));
 
-        instance2.setClass$("base");
-        instance2.setProducer(new SimpleProducer());
+        instance2.setAlarmclass("base");
+        instance2.setSource(new Source());
         instance2.setLocation(Arrays.asList("NL"));
 
         class1 = new AlarmClass();
-        class1.setLatching(true);
+        class1.setLatchable(true);
         class1.setCategory("CAMAC");
         class1.setFilterable(true);
         class1.setCorrectiveaction("fix it");

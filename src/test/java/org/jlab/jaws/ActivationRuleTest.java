@@ -18,7 +18,7 @@ public class ActivationRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, IntermediateMonolog> inputTopicRegisteredMonolog;
     private TestInputTopic<String, AlarmActivationUnion> inputTopicActive;
-    private TestInputTopic<OverriddenAlarmKey, AlarmOverrideUnion> inputTopicOverridden;
+    private TestInputTopic<AlarmOverrideKey, AlarmOverrideUnion> inputTopicOverridden;
     private TestOutputTopic<String, IntermediateMonolog> outputTopic;
     private AlarmInstance instance1;
     private AlarmInstance instance2;
@@ -28,7 +28,7 @@ public class ActivationRuleTest {
     private AlarmActivationUnion active2;
     private IntermediateMonolog registeredMonolog1;
     private EffectiveRegistration effectiveReg;
-    EffectiveActivation effectiveAct;
+    EffectiveNotification effectiveNot;
 
     @Before
     public void setup() {
@@ -48,16 +48,16 @@ public class ActivationRuleTest {
         instance1 = new AlarmInstance();
         instance2 = new AlarmInstance();
 
-        instance1.setClass$("base");
-        instance1.setProducer(new SimpleProducer());
+        instance1.setAlarmclass("base");
+        instance1.setSource(new Source());
         instance1.setLocation(Arrays.asList("NL"));
 
-        instance2.setClass$("base");
-        instance2.setProducer(new SimpleProducer());
+        instance2.setAlarmclass("base");
+        instance2.setSource(new Source());
         instance2.setLocation(Arrays.asList("NL"));
 
         class1 = new AlarmClass();
-        class1.setLatching(true);
+        class1.setLatchable(true);
         class1.setCategory("CAMAC");
         class1.setFilterable(true);
         class1.setCorrectiveaction("fix it");
@@ -71,23 +71,23 @@ public class ActivationRuleTest {
         active1 = new AlarmActivationUnion();
         active2 = new AlarmActivationUnion();
 
-        active1.setMsg(new SimpleAlarming());
-        active2.setMsg(new SimpleAlarming());
+        active1.setUnion(new Activation());
+        active2.setUnion(new Activation());
 
         effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
                 .setInstance(instance1)
                 .build();
 
-        effectiveAct = EffectiveActivation.newBuilder()
-                .setActual(active1)
+        effectiveNot = EffectiveNotification.newBuilder()
+                .setActivation(active1)
                 .setOverrides(new AlarmOverrideSet())
                 .setState(AlarmState.Normal)
                 .build();
 
         registeredMonolog1 = IntermediateMonolog.newBuilder()
                 .setRegistration(effectiveReg)
-                .setActivation(effectiveAct)
+                .setNotification(effectiveNot)
                 .setTransitions(new ProcessorTransitions())
                 .build();
     }
@@ -101,8 +101,8 @@ public class ActivationRuleTest {
     public void noRegistrationOrActiveButOverride() {
         AlarmOverrideUnion AlarmOverrideUnion1 = new AlarmOverrideUnion();
         LatchedOverride latchedOverride = new LatchedOverride();
-        AlarmOverrideUnion1.setMsg(latchedOverride);
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
+        AlarmOverrideUnion1.setUnion(latchedOverride);
+        inputTopicOverridden.pipeInput(new AlarmOverrideKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
 
         List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
         Assert.assertEquals(1, results.size());
@@ -148,7 +148,7 @@ public class ActivationRuleTest {
 
         KeyValue<String, IntermediateMonolog> result2 = results.get(1);
 
-        IntermediateMonolog expected = new IntermediateMonolog(effectiveReg, effectiveAct, new ProcessorTransitions());
+        IntermediateMonolog expected = new IntermediateMonolog(effectiveReg, effectiveNot, new ProcessorTransitions());
 
         System.err.println(expected);
         System.err.println(result2.value);
@@ -165,17 +165,17 @@ public class ActivationRuleTest {
 
         AlarmOverrideUnion AlarmOverrideUnion1 = new AlarmOverrideUnion();
         LatchedOverride latchedOverride = new LatchedOverride();
-        AlarmOverrideUnion1.setMsg(latchedOverride);
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
+        AlarmOverrideUnion1.setUnion(latchedOverride);
+        inputTopicOverridden.pipeInput(new AlarmOverrideKey("alarm1", OverriddenAlarmType.Latched), AlarmOverrideUnion1);
 
         AlarmOverrideUnion AlarmOverrideUnion2 = new AlarmOverrideUnion();
         DisabledOverride disabledOverride = new DisabledOverride();
         disabledOverride.setComments("Testing");
-        AlarmOverrideUnion2.setMsg(disabledOverride);
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), AlarmOverrideUnion2);
+        AlarmOverrideUnion2.setUnion(disabledOverride);
+        inputTopicOverridden.pipeInput(new AlarmOverrideKey("alarm1", OverriddenAlarmType.Disabled), AlarmOverrideUnion2);
 
 
-        inputTopicOverridden.pipeInput(new OverriddenAlarmKey("alarm1", OverriddenAlarmType.Disabled), null);
+        inputTopicOverridden.pipeInput(new AlarmOverrideKey("alarm1", OverriddenAlarmType.Disabled), null);
 
 
         List<KeyValue<String, IntermediateMonolog>> results = outputTopic.readKeyValuesToList();
@@ -193,7 +193,7 @@ public class ActivationRuleTest {
                 .setLatched(new LatchedOverride())
                 .build();
 
-        EffectiveActivation ea = EffectiveActivation.newBuilder(effectiveAct).build();
+        EffectiveNotification ea = EffectiveNotification.newBuilder(effectiveNot).build();
         ea.setOverrides(overrides);
 
         Assert.assertEquals("alarm1", result.key);
@@ -237,21 +237,21 @@ public class ActivationRuleTest {
                 .build();
 
         ProcessorTransitions transitions = ProcessorTransitions.newBuilder().build();
-        EffectiveActivation ea = EffectiveActivation.newBuilder(effectiveAct).build();
+        EffectiveNotification ea = EffectiveNotification.newBuilder(effectiveNot).build();
 
-        ea.setActual(null);
+        ea.setActivation(null);
         ea.setOverrides(overrides);
         Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions), result0.value);
 
         ProcessorTransitions transitions2 = ProcessorTransitions.newBuilder().setTransitionToActive(true).build();
-        ea.setActual(active1);
+        ea.setActivation(active1);
         Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions2), result1.value);
 
         ProcessorTransitions transitions3 = ProcessorTransitions.newBuilder().setTransitionToNormal(true).build();
-        ea.setActual(null);
+        ea.setActivation(null);
         Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions3), result2.value);
 
-        ea.setActual(active1);
+        ea.setActivation(active1);
         Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions2), result3.value);
 
         Assert.assertEquals(new IntermediateMonolog(effectiveReg, ea, transitions), result4.value);

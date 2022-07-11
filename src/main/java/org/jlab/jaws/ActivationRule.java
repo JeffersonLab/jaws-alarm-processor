@@ -37,7 +37,7 @@ public class ActivationRule extends ProcessingRule {
     public static final Serdes.StringSerde ACTIVE_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<AlarmActivationUnion> ACTIVE_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
@@ -88,7 +88,7 @@ public class ActivationRule extends ProcessingRule {
                 .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
                     public boolean test(String key, IntermediateMonolog value) {
-                        log.debug("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
+                        log.debug("CLASS-ACTIVE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tnotification: " + value.getNotification());
                         return true;
                     }
                 });
@@ -99,7 +99,7 @@ public class ActivationRule extends ProcessingRule {
                 .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
                     public boolean test(String key, IntermediateMonolog value) {
-                        log.debug("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tactive: " + value.getActivation());
+                        log.debug("ACTIVE-OVERRIDE JOIN RESULT: key: " + key + "\n\tregistered: " + value.getRegistration() + ", \n\tnotification: " + value.getNotification());
                         return true;
                     }
                 });
@@ -138,15 +138,15 @@ public class ActivationRule extends ProcessingRule {
                     .setInstance(null)
                     .build();
 
-            EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
-                    .setActual(active)
+            EffectiveNotification effectiveNot = EffectiveNotification.newBuilder()
+                    .setActivation(active)
                     .setOverrides(new AlarmOverrideSet())
                     .setState(AlarmState.Normal)
                     .build();
 
             IntermediateMonolog result = IntermediateMonolog.newBuilder()
                     .setRegistration(effectiveReg)
-                    .setActivation(effectiveAct)
+                    .setNotification(effectiveNot)
                     .setTransitions(new ProcessorTransitions())
                     .build();
 
@@ -177,32 +177,32 @@ public class ActivationRule extends ProcessingRule {
 
             if(overrideList != null) {
                 for(AlarmOverrideUnion over: overrideList.getOverrides()) {
-                    if(over.getMsg() instanceof DisabledOverride) {
-                        overrides.setDisabled((DisabledOverride) over.getMsg());
+                    if(over.getUnion() instanceof DisabledOverride) {
+                        overrides.setDisabled((DisabledOverride) over.getUnion());
                     }
 
-                    if(over.getMsg() instanceof FilteredOverride) {
-                        overrides.setFiltered((FilteredOverride) over.getMsg());
+                    if(over.getUnion() instanceof FilteredOverride) {
+                        overrides.setFiltered((FilteredOverride) over.getUnion());
                     }
 
-                    if(over.getMsg() instanceof LatchedOverride) {
-                        overrides.setLatched((LatchedOverride) over.getMsg());
+                    if(over.getUnion() instanceof LatchedOverride) {
+                        overrides.setLatched((LatchedOverride) over.getUnion());
                     }
 
-                    if(over.getMsg() instanceof MaskedOverride) {
-                        overrides.setMasked((MaskedOverride) over.getMsg());
+                    if(over.getUnion() instanceof MaskedOverride) {
+                        overrides.setMasked((MaskedOverride) over.getUnion());
                     }
 
-                    if(over.getMsg() instanceof OnDelayedOverride) {
-                        overrides.setOndelayed((OnDelayedOverride) over.getMsg());
+                    if(over.getUnion() instanceof OnDelayedOverride) {
+                        overrides.setOndelayed((OnDelayedOverride) over.getUnion());
                     }
 
-                    if(over.getMsg() instanceof OffDelayedOverride) {
-                        overrides.setOffdelayed((OffDelayedOverride) over.getMsg());
+                    if(over.getUnion() instanceof OffDelayedOverride) {
+                        overrides.setOffdelayed((OffDelayedOverride) over.getUnion());
                     }
 
-                    if(over.getMsg() instanceof ShelvedOverride) {
-                        overrides.setShelved((ShelvedOverride) over.getMsg());
+                    if(over.getUnion() instanceof ShelvedOverride) {
+                        overrides.setShelved((ShelvedOverride) over.getUnion());
                     }
                 }
             }
@@ -213,19 +213,19 @@ public class ActivationRule extends ProcessingRule {
                 result = IntermediateMonolog.newBuilder(registeredAndActive)
                         .build();
 
-                        result.getActivation().setOverrides(overrides);
+                        result.getNotification().setOverrides(overrides);
             } else {
                 EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                         .build();
 
-                EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
+                EffectiveNotification effectiveNot = EffectiveNotification.newBuilder()
                         .setOverrides(overrides)
                         .setState(AlarmState.Normal)
                         .build();
 
                 result = IntermediateMonolog.newBuilder()
                         .setRegistration(effectiveReg)
-                        .setActivation(effectiveAct)
+                        .setNotification(effectiveNot)
                         .setTransitions(new ProcessorTransitions())
                         .build();
             }
@@ -235,7 +235,7 @@ public class ActivationRule extends ProcessingRule {
     }
 
     private KTable<String, OverrideList> getOverriddenViaGroupBy(StreamsBuilder builder) {
-        final KTable<OverriddenAlarmKey, AlarmOverrideUnion> overriddenTable = builder.table(inputTopicOverridden,
+        final KTable<AlarmOverrideKey, AlarmOverrideUnion> overriddenTable = builder.table(inputTopicOverridden,
                 Consumed.as("Overridden-Table").with(OVERRIDE_KEY_SERDE, OVERRIDE_VALUE_SERDE));
 
         final KTable<String, OverrideList> groupTable = overriddenTable
@@ -266,7 +266,7 @@ public class ActivationRule extends ProcessingRule {
         return groupTable;
     }
 
-    private static KeyValue<String, OverrideList> groupOverride(OverriddenAlarmKey key, AlarmOverrideUnion value) {
+    private static KeyValue<String, OverrideList> groupOverride(AlarmOverrideKey key, AlarmOverrideUnion value) {
         List<AlarmOverrideUnion> list = new ArrayList<>();
         list.add(value);
         return new KeyValue<>(key.getName(), new OverrideList(list));
@@ -320,19 +320,19 @@ public class ActivationRule extends ProcessingRule {
                     if(value == null) {
                         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder().build();
 
-                        EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
+                        EffectiveNotification effectiveNot = EffectiveNotification.newBuilder()
                                 .setOverrides(new AlarmOverrideSet())
                                 .setState(AlarmState.Normal)
                                 .build();
 
                         value = IntermediateMonolog.newBuilder()
                                 .setRegistration(effectiveReg)
-                                .setActivation(effectiveAct)
+                                .setNotification(effectiveNot)
                                 .setTransitions(new ProcessorTransitions())
                                 .build();
                     }
 
-                    next = value.getActivation().getActual();
+                    next = value.getNotification().getActivation();
 
                     if (previous == null && next != null) {
                         //System.err.println("TRANSITION TO ACTIVE!");

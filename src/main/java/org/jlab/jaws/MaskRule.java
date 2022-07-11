@@ -34,7 +34,7 @@ public class MaskRule extends ProcessingRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde MASK_STORE_KEY_SERDE = new Serdes.StringSerde();
@@ -78,14 +78,14 @@ public class MaskRule extends ProcessingRule {
             @Override
             public boolean test(String key, IntermediateMonolog value) {
                 System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getActivation().getOverrides().getMasked() == null && value.getTransitions().getTransitionToActive();
+                return value.getNotification().getOverrides().getMasked() == null && value.getTransitions().getTransitionToActive();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> maskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<AlarmOverrideKey, AlarmOverrideUnion> maskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), new AlarmOverrideUnion(new MaskedOverride()));
+            public KeyValue<AlarmOverrideKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
+                return new KeyValue<>(new AlarmOverrideKey(key, OverriddenAlarmType.Masked), new AlarmOverrideUnion(new MaskedOverride()));
             }
         });
 
@@ -96,14 +96,14 @@ public class MaskRule extends ProcessingRule {
             @Override
             public boolean test(String key, IntermediateMonolog value) {
                 System.err.println("Filtering: " + key + ", value: " + value);
-                return value.getActivation().getOverrides().getMasked() != null && value.getTransitions().getTransitionToNormal();
+                return value.getNotification().getOverrides().getMasked() != null && value.getTransitions().getTransitionToNormal();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> unmaskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<AlarmOverrideKey, AlarmOverrideUnion> unmaskOverrides = maskOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Masked), null);
+            public KeyValue<AlarmOverrideKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
+                return new KeyValue<>(new AlarmOverrideKey(key, OverriddenAlarmType.Masked), null);
             }
         });
 
@@ -168,7 +168,7 @@ public class MaskRule extends ProcessingRule {
                     boolean masking = false;
                     boolean unmasking = false;
 
-                    if(value.getActivation().getOverrides().getMasked() != null) {
+                    if(value.getNotification().getOverrides().getMasked() != null) {
 
                         // Check if already mask in-progress
                         masking = store.get(key) != null;

@@ -17,7 +17,7 @@ public class LatchRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, IntermediateMonolog> inputTopicMonolog;
     private TestOutputTopic<String, IntermediateMonolog> outputPassthroughTopic;
-    private TestOutputTopic<OverriddenAlarmKey, AlarmOverrideUnion> outputOverrideTopic;
+    private TestOutputTopic<AlarmOverrideKey, AlarmOverrideUnion> outputOverrideTopic;
     private AlarmInstance instance1;
     private AlarmInstance instance2;
     private AlarmClass class1;
@@ -45,16 +45,16 @@ public class LatchRuleTest {
         instance1 = new AlarmInstance();
         instance2 = new AlarmInstance();
 
-        instance1.setClass$("base");
-        instance1.setProducer(new SimpleProducer());
+        instance1.setAlarmclass("base");
+        instance1.setSource(new Source());
         instance1.setLocation(Arrays.asList("NL"));
 
-        instance2.setClass$("base");
-        instance2.setProducer(new SimpleProducer());
+        instance2.setAlarmclass("base");
+        instance2.setSource(new Source());
         instance2.setLocation(Arrays.asList("NL"));
 
         class1 = new AlarmClass();
-        class1.setLatching(true);
+        class1.setLatchable(true);
         class1.setCategory("CAMAC");
         class1.setFilterable(true);
         class1.setCorrectiveaction("fix it");
@@ -65,23 +65,23 @@ public class LatchRuleTest {
         active1 = new AlarmActivationUnion();
         active2 = new AlarmActivationUnion();
 
-        active1.setMsg(new SimpleAlarming());
-        active2.setMsg(new SimpleAlarming());
+        active1.setUnion(new Activation());
+        active2.setUnion(new Activation());
 
         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
                 .setInstance(instance1)
                 .build();
 
-        EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
-                .setActual(active1)
+        EffectiveNotification effectiveNot = EffectiveNotification.newBuilder()
+                .setActivation(active1)
                 .setOverrides(new AlarmOverrideSet())
                 .setState(AlarmState.Normal)
                 .build();
 
         mono1 = new IntermediateMonolog();
         mono1.setRegistration(effectiveReg);
-        mono1.setActivation(effectiveAct);
+        mono1.setNotification(effectiveNot);
         mono1.setTransitions(new ProcessorTransitions());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
@@ -94,11 +94,11 @@ public class LatchRuleTest {
 
     @Test
     public void notLatching() {
-        mono1.getRegistration().getClass$().setLatching(false);
+        mono1.getRegistration().getClass$().setLatchable(false);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         List<KeyValue<String, IntermediateMonolog>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
-        List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+        List<KeyValue<AlarmOverrideKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, passthroughResults.size());
         Assert.assertEquals(0, overrideResults.size());
@@ -106,12 +106,12 @@ public class LatchRuleTest {
 
     @Test
     public void latching() {
-        mono1.getRegistration().getClass$().setLatching(true);
+        mono1.getRegistration().getClass$().setLatchable(true);
 
         inputTopicMonolog.pipeInput("alarm1", mono1);
         //inputTopicMonolog.pipeInput("alarm2", mono1);
         List<KeyValue<String, IntermediateMonolog>> passthroughResults = outputPassthroughTopic.readKeyValuesToList();
-        List<KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
+        List<KeyValue<AlarmOverrideKey, AlarmOverrideUnion>> overrideResults = outputOverrideTopic.readKeyValuesToList();
 
         System.err.println("\n\nInitial Passthrough:");
         for(KeyValue<String, IntermediateMonolog> pass: passthroughResults) {
@@ -119,7 +119,7 @@ public class LatchRuleTest {
         }
 
         System.err.println("\n\nInitial Overrides:");
-        for(KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> over: overrideResults) {
+        for(KeyValue<AlarmOverrideKey, AlarmOverrideUnion> over: overrideResults) {
             System.err.println(over);
         }
 
@@ -132,14 +132,14 @@ public class LatchRuleTest {
 
         Assert.assertEquals(true, passResult.value.getTransitions().getLatching());
 
-        KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> result = overrideResults.get(0);
+        KeyValue<AlarmOverrideKey, AlarmOverrideUnion> result = overrideResults.get(0);
 
         Assert.assertEquals("alarm1", result.key.getName());
         Assert.assertEquals(new AlarmOverrideUnion(new LatchedOverride()), result.value);
 
         IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
-        mono2.getActivation().getOverrides().setLatched(new LatchedOverride());
+        mono2.getNotification().getOverrides().setLatched(new LatchedOverride());
         mono2.getTransitions().setTransitionToActive(false);
 
         inputTopicMonolog.pipeInput("alarm1", mono2);
@@ -153,7 +153,7 @@ public class LatchRuleTest {
         }
 
         System.err.println("\n\nFinal Overrides:");
-        for(KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> over: overrideResults) {
+        for(KeyValue<AlarmOverrideKey, AlarmOverrideUnion> over: overrideResults) {
             System.err.println(over);
         }
 

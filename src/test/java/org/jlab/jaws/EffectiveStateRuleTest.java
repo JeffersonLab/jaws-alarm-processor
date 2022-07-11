@@ -16,7 +16,7 @@ import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHE
 public class EffectiveStateRuleTest {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, IntermediateMonolog> inputTopic;
-    private TestOutputTopic<String, EffectiveActivation> effectiveActivationTopic;
+    private TestOutputTopic<String, EffectiveNotification> EffectiveNotificationTopic;
     private TestOutputTopic<String, EffectiveAlarm> effectiveAlarmTopic;
     private AlarmInstance instance1;
     private AlarmInstance instance2;
@@ -24,7 +24,7 @@ public class EffectiveStateRuleTest {
     private AlarmActivationUnion active1;
     private AlarmActivationUnion active2;
     private IntermediateMonolog mono1;
-    private EffectiveActivation effectiveAct;
+    private EffectiveNotification effectiveNot;
 
     @Before
     public void setup() {
@@ -40,21 +40,21 @@ public class EffectiveStateRuleTest {
 
         // setup test topics
         inputTopic = testDriver.createInputTopic(rule.inputTopic, EffectiveStateRule.MONOLOG_KEY_SERDE.serializer(), EffectiveStateRule.MONOLOG_VALUE_SERDE.serializer());
-        effectiveActivationTopic = testDriver.createOutputTopic(rule.effectiveActivationTopic, EffectiveStateRule.EFFECTIVE_ACTIVATION_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_ACTIVATION_VALUE_SERDE.deserializer());
+        EffectiveNotificationTopic = testDriver.createOutputTopic(rule.EffectiveNotificationTopic, EffectiveStateRule.EFFECTIVE_NOTIFICATION_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_NOTIFICATION_VALUE_SERDE.deserializer());
         effectiveAlarmTopic = testDriver.createOutputTopic(rule.effectiveAlarmTopic, EffectiveStateRule.EFFECTIVE_ALARM_KEY_SERDE.deserializer(), EffectiveStateRule.EFFECTIVE_ALARM_VALUE_SERDE.deserializer());
         instance1 = new AlarmInstance();
         instance2 = new AlarmInstance();
 
-        instance1.setClass$("base");
-        instance1.setProducer(new SimpleProducer());
+        instance1.setAlarmclass("base");
+        instance1.setSource(new Source());
         instance1.setLocation(Arrays.asList("NL"));
 
-        instance2.setClass$("base");
-        instance2.setProducer(new SimpleProducer());
+        instance2.setAlarmclass("base");
+        instance2.setSource(new Source());
         instance2.setLocation(Arrays.asList("NL"));
 
         class1 = new AlarmClass();
-        class1.setLatching(true);
+        class1.setLatchable(true);
         class1.setCategory("CAMAC");
         class1.setFilterable(true);
         class1.setCorrectiveaction("fix it");
@@ -65,23 +65,23 @@ public class EffectiveStateRuleTest {
         active1 = new AlarmActivationUnion();
         active2 = new AlarmActivationUnion();
 
-        active1.setMsg(new SimpleAlarming());
-        active2.setMsg(new SimpleAlarming());
+        active1.setUnion(new Activation());
+        active2.setUnion(new Activation());
 
         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder()
                 .setClass$(class1)
                 .setInstance(instance1)
                 .build();
 
-        effectiveAct = EffectiveActivation.newBuilder()
-                .setActual(active1)
+        effectiveNot = EffectiveNotification.newBuilder()
+                .setActivation(active1)
                 .setOverrides(new AlarmOverrideSet())
                 .setState(AlarmState.Normal)
                 .build();
 
         mono1 = new IntermediateMonolog();
         mono1.setRegistration(effectiveReg);
-        mono1.setActivation(effectiveAct);
+        mono1.setNotification(effectiveNot);
         mono1.setTransitions(new ProcessorTransitions());
         mono1.getTransitions().setTransitionToActive(true);
         mono1.getTransitions().setTransitionToNormal(false);
@@ -94,20 +94,20 @@ public class EffectiveStateRuleTest {
 
     @Test
     public void notLatching() {
-        mono1.getActivation().setActual(null);
+        mono1.getNotification().setActivation(null);
         mono1.getTransitions().setTransitionToActive(false);
 
         inputTopic.pipeInput("alarm1", mono1);
         List<KeyValue<String, EffectiveAlarm>> stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("Normal", stateResults.get(0).value.getActivation().getState().name());
+        Assert.assertEquals("Normal", stateResults.get(0).value.getNotification().getState().name());
     }
 
     @Test
     public void latching() {
-        mono1.getRegistration().getClass$().setLatching(true);
-        mono1.getActivation().setActual(null);
+        mono1.getRegistration().getClass$().setLatchable(true);
+        mono1.getNotification().setActivation(null);
         mono1.getTransitions().setLatching(true);
 
         inputTopic.pipeInput("alarm1", mono1);
@@ -124,11 +124,11 @@ public class EffectiveStateRuleTest {
 
         KeyValue<String, EffectiveAlarm> passResult = stateResults.get(0);
 
-        Assert.assertEquals("ActiveLatched", passResult.value.getActivation().getState().name());
+        Assert.assertEquals("ActiveLatched", passResult.value.getNotification().getState().name());
 
         IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
-        mono2.getActivation().getOverrides().setLatched(new LatchedOverride());
+        mono2.getNotification().getOverrides().setLatched(new LatchedOverride());
 
         inputTopic.pipeInput("alarm1", mono2);
 
@@ -140,23 +140,23 @@ public class EffectiveStateRuleTest {
         }
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("ActiveLatched", passResult.value.getActivation().getState().name());
+        Assert.assertEquals("ActiveLatched", passResult.value.getNotification().getState().name());
     }
 
     @Test
     public void shelved() {
-        mono1.setActivation(effectiveAct);
+        mono1.setNotification(effectiveNot);
 
         inputTopic.pipeInput("alarm1", mono1);
         List<KeyValue<String, EffectiveAlarm>> stateResults = effectiveAlarmTopic.readKeyValuesToList();
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("Active", stateResults.get(0).value.getActivation().getState().name());
+        Assert.assertEquals("Active", stateResults.get(0).value.getNotification().getState().name());
 
 
         IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
-        mono2.getActivation().getOverrides().setShelved(new ShelvedOverride(false, 12345l, ShelvedReason.Other, null));
+        mono2.getNotification().getOverrides().setShelved(new ShelvedOverride(false, 12345l, ShelvedReason.Other, null));
 
         inputTopic.pipeInput("alarm1", mono2);
 
@@ -168,6 +168,6 @@ public class EffectiveStateRuleTest {
         }
 
         Assert.assertEquals(1, stateResults.size());
-        Assert.assertEquals("NormalContinuousShelved", stateResults.get(0).value.getActivation().getState().name());
+        Assert.assertEquals("NormalContinuousShelved", stateResults.get(0).value.getNotification().getState().name());
     }
 }

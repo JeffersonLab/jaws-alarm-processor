@@ -33,7 +33,7 @@ public class OneShotRule extends ProcessingRule {
     public static final Serdes.StringSerde MONOLOG_KEY_SERDE = new Serdes.StringSerde();
     public static final SpecificAvroSerde<IntermediateMonolog> MONOLOG_VALUE_SERDE = new SpecificAvroSerde<>();
 
-    public static final SpecificAvroSerde<OverriddenAlarmKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
+    public static final SpecificAvroSerde<AlarmOverrideKey> OVERRIDE_KEY_SERDE = new SpecificAvroSerde<>();
     public static final SpecificAvroSerde<AlarmOverrideUnion> OVERRIDE_VALUE_SERDE = new SpecificAvroSerde<>();
 
     public static final Serdes.StringSerde ONESHOT_STORE_KEY_SERDE = new Serdes.StringSerde();
@@ -75,14 +75,14 @@ public class OneShotRule extends ProcessingRule {
             @Override
             public boolean test(String key, IntermediateMonolog value) {
                 log.debug("Filtering: " + key + ", value: " + value);
-                return value.getActivation().getOverrides().getShelved() != null && value.getActivation().getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
+                return value.getNotification().getOverrides().getShelved() != null && value.getNotification().getOverrides().getShelved().getOneshot() && value.getTransitions().getTransitionToNormal();
             }
         });
 
-        KStream<OverriddenAlarmKey, AlarmOverrideUnion> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<OverriddenAlarmKey, AlarmOverrideUnion>>() {
+        KStream<AlarmOverrideKey, AlarmOverrideUnion> oneshotOverrides = oneshotOverrideMonolog.map(new KeyValueMapper<String, IntermediateMonolog, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>>() {
             @Override
-            public KeyValue<OverriddenAlarmKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
-                return new KeyValue<>(new OverriddenAlarmKey(key, OverriddenAlarmType.Shelved), null);
+            public KeyValue<AlarmOverrideKey, AlarmOverrideUnion> apply(String key, IntermediateMonolog value) {
+                return new KeyValue<>(new AlarmOverrideKey(key, OverriddenAlarmType.Shelved), null);
             }
         });
 
@@ -147,7 +147,7 @@ public class OneShotRule extends ProcessingRule {
                     boolean unshelving = false;
 
                     // Skip the filter unless oneshot is set
-                    if(value.getActivation().getOverrides().getShelved() != null && value.getActivation().getOverrides().getShelved().getOneshot()) {
+                    if(value.getNotification().getOverrides().getShelved() != null && value.getNotification().getOverrides().getShelved().getOneshot()) {
 
                         // Check if already unshelving in-progress
                         unshelving = store.get(key) != null;

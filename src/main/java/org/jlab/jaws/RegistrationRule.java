@@ -78,7 +78,7 @@ public class RegistrationRule extends ProcessingRule {
                 Consumed.as("Instances-Table").with(INPUT_KEY_INSTANCES_SERDE, INPUT_VALUE_INSTANCES_SERDE));
 
         KTable<String, IntermediateMonolog> classesAndRegistered = registeredTable.leftJoin(classesTable,
-                AlarmInstance::getClass$, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
+                AlarmInstance::getAlarmclass, new AlarmClassJoiner(), Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
                 .filter(new Predicate<String, IntermediateMonolog>() {
                     @Override
                     public boolean test(String key, IntermediateMonolog value) {
@@ -122,15 +122,15 @@ public class RegistrationRule extends ProcessingRule {
                     .setInstance(instance)
                     .build();
 
-            EffectiveActivation effectiveAct = EffectiveActivation.newBuilder()
-                    .setActual(null)
+            EffectiveNotification effectiveNot = EffectiveNotification.newBuilder()
+                    .setActivation(null)
                     .setOverrides(new AlarmOverrideSet())
                     .setState(AlarmState.Normal)
                     .build();
 
             IntermediateMonolog monolog = IntermediateMonolog.newBuilder()
                     .setRegistration(effectiveReg)
-                    .setActivation(effectiveAct)
+                    .setNotification(effectiveNot)
                     .setTransitions(new ProcessorTransitions())
                     .build();
 
