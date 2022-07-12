@@ -108,7 +108,7 @@ public class EffectiveStateRuleTest {
     public void latching() {
         mono1.getRegistration().getClass$().setLatchable(true);
         mono1.getNotification().setActivation(null);
-        mono1.getTransitions().setLatching(true);
+        mono1.getTransitions().setLatching(true); // should result in dropped message when transitioning
 
         inputTopic.pipeInput("alarm1", mono1);
         List<KeyValue<String, EffectiveAlarm>> stateResults = effectiveAlarmTopic.readKeyValuesToList();
@@ -120,15 +120,12 @@ public class EffectiveStateRuleTest {
 
         System.err.println("\n");
 
-        Assert.assertEquals(1, stateResults.size());
-
-        KeyValue<String, EffectiveAlarm> passResult = stateResults.get(0);
-
-        Assert.assertEquals("ActiveLatched", passResult.value.getNotification().getState().name());
+        Assert.assertEquals(0, stateResults.size());
 
         IntermediateMonolog mono2 = IntermediateMonolog.newBuilder(mono1).build();
 
         mono2.getNotification().getOverrides().setLatched(new LatchedOverride());
+        mono2.getTransitions().setLatching(false); // We're no longer transitioning AND we have override!
 
         inputTopic.pipeInput("alarm1", mono2);
 
@@ -138,6 +135,8 @@ public class EffectiveStateRuleTest {
         for(KeyValue<String, EffectiveAlarm> pass: stateResults) {
             System.err.println(pass);
         }
+
+        KeyValue<String, EffectiveAlarm> passResult = stateResults.get(0);
 
         Assert.assertEquals(1, stateResults.size());
         Assert.assertEquals("ActiveLatched", passResult.value.getNotification().getState().name());

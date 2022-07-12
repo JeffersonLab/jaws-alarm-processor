@@ -131,6 +131,23 @@ public class EffectiveStateRule extends ProcessingRule {
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
                     log.debug("Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getNotification(),value.getNotification().getOverrides(),value.getTransitions());
 
+                    // If transitioning, we drop message as it's an intermediate message.
+                    // This could introduce substantial latency and high
+                    // frequency changes effectively result in denial-of-service.  However, transitioning means
+                    // we've produced one or more messages on the alarm-overrides topic in response to the current
+                    // message and an intermediate message quickly followed by computed message means active segment of
+                    // notifications and alarms topics has double the number of messages (extra intermediate message
+                    // generally can't be compacted as it's generally in the active segment with computed message due to
+                    // proximity)
+                    if(value.getTransitions().getLatching() ||
+                       value.getTransitions().getOffdelaying() ||
+                       value.getTransitions().getOndelaying() ||
+                       value.getTransitions().getUnshelving() ||
+                       value.getTransitions().getMasking() ||
+                       value.getTransitions().getUnmasking()) {
+                        return null;
+                    }
+
                     // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
                     AlarmState state = AlarmState.Normal;
