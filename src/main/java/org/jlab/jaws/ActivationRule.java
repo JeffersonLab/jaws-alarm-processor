@@ -305,15 +305,6 @@ public class ActivationRule extends ProcessingRule {
 
                 @Override
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    AlarmActivationUnion previous = store.get(key);
-                    AlarmActivationUnion next = null;
-
-                    //System.err.println("previous: " + previous);
-                    //System.err.println("next: " + (value == null ? null : value.getActive()));
-
-                    boolean transitionToActive = false;
-                    boolean transitionToNormal = false;
-
                     // Handle Scenario where only one of Registration or Activation and it just got tombstoned!
                     // Instead of forwarding IntermediateMonolog = null we always forward non-null IntermediateMonolog,
                     // but fields inside may be null
@@ -332,7 +323,21 @@ public class ActivationRule extends ProcessingRule {
                                 .build();
                     }
 
+                    AlarmActivationUnion previous = store.get(key);
+                    AlarmActivationUnion next = null;
+
                     next = value.getNotification().getActivation();
+
+                    // We substitute null for NoActivation to ensure non-null means real activation
+                    if(next != null && next.getUnion() instanceof NoActivation) {
+                        next = null;
+                    }
+
+                    //System.err.println("previous: " + previous);
+                    //System.err.println("next: " + (value == null ? null : value.getActive()));
+
+                    boolean transitionToActive = false;
+                    boolean transitionToNormal = false;
 
                     if (previous == null && next != null) {
                         //System.err.println("TRANSITION TO ACTIVE!");
