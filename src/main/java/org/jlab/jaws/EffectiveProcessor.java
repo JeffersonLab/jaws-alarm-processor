@@ -1,5 +1,6 @@
 package org.jlab.jaws;
 
+import org.jlab.jaws.clients.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,14 +21,14 @@ public class EffectiveProcessor {
     public static void main(String[] args) {
 
         // async
-        rules.add(new ShelveExpirationRule("alarm-overrides", "alarm-overrides"));
+        rules.add(new ShelveExpirationRule(OverrideProducer.TOPIC, OverrideProducer.TOPIC));
 
         // pipelined
-        rules.add(new RegistrationRule("alarm-classes", "alarm-instances", "effective-registrations", "intermediate-registration"));
-        rules.add(new ActivationRule("intermediate-registration", "alarm-activations", "alarm-overrides", "intermediate-activation"));
-        rules.add(new LatchRule("intermediate-activation", "intermediate-latch", "alarm-overrides"));
-        rules.add(new OneShotRule("intermediate-latch", "intermediate-oneshot", "alarm-overrides"));
-        rules.add(new EffectiveStateRule("intermediate-oneshot", "effective-activations", "effective-alarms"));
+        rules.add(new RegistrationRule(ClassProducer.TOPIC, InstanceProducer.TOPIC, EffectiveRegistrationProducer.TOPIC, "intermediate-registration"));
+        rules.add(new ActivationRule("intermediate-registration", ActivationProducer.TOPIC, OverrideProducer.TOPIC, "intermediate-activation"));
+        rules.add(new LatchRule("intermediate-activation", "intermediate-latch", OverrideProducer.TOPIC));
+        rules.add(new OneShotRule("intermediate-latch", "intermediate-oneshot", OverrideProducer.TOPIC));
+        rules.add(new EffectiveStateRule("intermediate-oneshot", EffectiveNotificationProducer.TOPIC, EffectiveAlarmProducer.TOPIC));
 
         final CountDownLatch latch = new CountDownLatch(1);
 
