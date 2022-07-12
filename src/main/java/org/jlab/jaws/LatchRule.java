@@ -22,7 +22,7 @@ import java.util.Properties;
 import static io.confluent.kafka.serializers.AbstractKafkaSchemaSerDeConfig.SCHEMA_REGISTRY_URL_CONFIG;
 
 /**
- * Adds a Latched override for alarms registered as latching that become active.
+ * Adds a Latched override for alarms registered as latchable that become active.
  */
 public class LatchRule extends ProcessingRule {
 
@@ -144,7 +144,7 @@ public class LatchRule extends ProcessingRule {
                 public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
                     log.debug("Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getNotification().getActivation(),value.getNotification().getOverrides(),value.getTransitions());
 
-                    // Skip the filter unless latching is registered
+                    // Skip the filter unless latchable is registered
                     if(value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatchable())) {
 
                         // Check if already latching in-progress
