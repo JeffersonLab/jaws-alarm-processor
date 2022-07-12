@@ -8,6 +8,7 @@ Read more about [Overrides and Effective State](https://github.com/JeffersonLab/
  - [Install](https://github.com/JeffersonLab/jaws-effective-processor#install) 
  - [Configure](https://github.com/JeffersonLab/jaws-effective-processor#configure)
  - [Build](https://github.com/JeffersonLab/jaws-effective-processor#build) 
+ - [Release](https://github.com/JeffersonLab/jaws-effective-processor#release)  
  - [See Also](https://github.com/JeffersonLab/jaws-effective-processor#see-also)
  ---
 
@@ -76,6 +77,11 @@ gradlew build
 **Note for JLab On-Site Users**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
 
 **See**: [Docker Development Quick Reference](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c#development-quick-reference)
+
+## Release
+1. Bump the version number in build.gradle and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).   
+2. Create a new release on the GitHub [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) page corresponding to same version in build.gradle (Enumerate changes and link issues).   Run dist build and attach zip to release.
+3. Build and push [Docker image](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c#8-build-an-image-based-of-github-tag)  
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
