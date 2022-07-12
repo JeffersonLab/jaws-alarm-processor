@@ -96,7 +96,7 @@ public class EffectiveStateRule extends ProcessingRule {
             }
         });
 
-        EffectiveNotifications.to(EffectiveNotificationTopic, Produced.as("EFFECTIVE-ACTIVATIONS-OUTPUT")
+        EffectiveNotifications.to(EffectiveNotificationTopic, Produced.as("EFFECTIVE-NOTIFICATIONS-OUTPUT")
                 .with(EFFECTIVE_NOTIFICATION_KEY_SERDE, EFFECTIVE_NOTIFICATION_VALUE_SERDE));
 
         return builder.build();
@@ -135,7 +135,7 @@ public class EffectiveStateRule extends ProcessingRule {
 
                     AlarmState state = AlarmState.Normal;
 
-                    if(value.getNotification().getActivation() != null) {
+                    if(value.getNotification().getActivation() != null && !(value.getNotification().getActivation().getUnion() instanceof NoActivation)) {
                         state = AlarmState.Active;
                     }
 
