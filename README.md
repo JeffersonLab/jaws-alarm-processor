@@ -18,7 +18,7 @@ Read more about [Overrides and Effective State](https://github.com/JeffersonLab/
 git clone https://github.com/JeffersonLab/jaws-effective-processor
 cd jaws-effective-processor
 ```
-2. Launch Docker
+2. Launch [Compose](https://github.com/docker/compose)
 ```
 docker compose up
 ```
