@@ -18,7 +18,7 @@ services:
     hostname: effective
     container_name: effective
     depends_on:
-      - jaws
+      - jaws-libp
     environment:
       BOOTSTRAP_SERVERS: "kafka:9092"
       SCHEMA_REGISTRY: "http://registry:8081"
