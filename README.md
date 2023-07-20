@@ -32,7 +32,7 @@ docker exec -it jaws-libp set_override --override Shelved alarm1 --reason Other 
 ```
 **See**: [Docker Compose Strategy](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c)
 
-**See**: More [Usage Examples](https://github.com/JeffersonLab/jaws/wiki/Usage-Examples)
+**See**: More [Usage Examples](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Usage-Examples)
 
 ## Install
 This application requires a Java 11+ JVM and standard library to run.
