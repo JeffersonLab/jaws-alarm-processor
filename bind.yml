@@ -1,9 +1,4 @@
 services:
-  zookeeper:
-    extends:
-      file: build.yml
-      service: zookeeper
-
   kafka:
     extends:
       file: build.yml
@@ -14,10 +9,10 @@ services:
       file: build.yml
       service: registry
 
-  jaws:
+  jaws-libp:
     extends:
       file: build.yml
-      service: jaws
+      service: jaws-libp
 
   effective:
     extends:

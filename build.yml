@@ -1,9 +1,4 @@
 services:
-  zookeeper:
-    extends:
-      file: docker-compose.yml
-      service: zookeeper
-
   kafka:
     extends:
       file: docker-compose.yml
@@ -14,10 +9,10 @@ services:
       file: docker-compose.yml
       service: registry
 
-  jaws:
+  jaws-libp:
     extends:
       file: docker-compose.yml
-      service: jaws
+      service: jaws-libp
 
   effective:
     extends:
