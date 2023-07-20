@@ -1,4 +1,4 @@
-# jaws-effective-processor [![CI](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yml/badge.svg)](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yml) [![Docker](https://img.shields.io/docker/v/slominskir/jaws-effective-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/slominskir/jaws-effective-processor)
+# jaws-effective-processor [![CI](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yml/badge.svg)](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yml) [![Docker](https://img.shields.io/docker/v/jeffersonlab/jaws-effective-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/jeffersonlab/jaws-effective-processor)
 A set of connected [Kafka Streams](https://kafka.apache.org/documentation/streams/) apps for [JAWS](https://github.com/JeffersonLab/jaws) that process alarm registration and notification data and compute effective state.  
 
 Read more about [Overrides and Effective State](https://github.com/JeffersonLab/jaws/wiki/Overrides-and-Effective-State) and [Software Design](https://github.com/JeffersonLab/jaws/wiki/Software-Design#effective-processor).
@@ -24,11 +24,11 @@ docker compose up
 ```
 3. Monitor for expiration tombstone message 
 ```
-docker exec -it jaws /scripts/client/list_overrides.py --monitor 
+docker exec -it jaws-libp list_overrides --monitor 
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec -it jaws /scripts/client/set_override.py --override Shelved alarm1 --reason Other --expirationseconds 5
+docker exec -it jaws-libp set_override --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 **See**: [Docker Compose Strategy](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c)
 
@@ -80,9 +80,9 @@ gradlew build
 
 ## Release
 1. Bump the version number in build.gradle and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).   
-2. Create a new release on the GitHub [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) page corresponding to same version in build.gradle (Enumerate changes and link issues).   Run dist build and attach zip to release.
-3. Build and push [Docker image](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c#8-build-an-image-based-of-github-tag)  
-4. Bump and commit quick start [image version](https://github.com/JeffersonLab/jaws-effective-processor/blob/main/docker-compose.override.yml)
+1. Create a new release on the GitHub [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) page corresponding to same version in build.gradle (Enumerate changes and link issues).   Run dist build and attach zip to release.
+1. [Publish to DockerHub](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/docker-publish.yml) GitHub Action should run automatically.
+1. Bump and commit quick start [image version](https://github.com/JeffersonLab/jaws-effective-processor/blob/main/docker-compose.override.yml) after confirming new image works
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
