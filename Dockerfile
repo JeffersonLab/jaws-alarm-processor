@@ -1,5 +1,6 @@
 ARG BUILD_IMAGE=gradle:7.4-jdk17-alpine
 ARG RUN_IMAGE=eclipse-temurin:11-alpine
+ARG CUSTOM_CRT_URL=http://pki.jlab.org/JLabCA.crt
 
 ################## Stage 0
 FROM ${BUILD_IMAGE} as builder
