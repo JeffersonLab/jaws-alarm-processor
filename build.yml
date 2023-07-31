@@ -9,10 +9,10 @@ services:
       file: docker-compose.yml
       service: registry
 
-  jaws-libp:
+  jaws:
     extends:
       file: docker-compose.yml
-      service: jaws-libp
+      service: jaws
 
   effective:
     extends:

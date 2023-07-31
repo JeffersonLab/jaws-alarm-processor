@@ -35,12 +35,12 @@ services:
       - SCHEMA_REGISTRY_LISTENERS=http://0.0.0.0:8081
       - SCHEMA_REGISTRY_KAFKA_BROKERS=PLAINTEXT://kafka:9092
 
-  jaws-libp:
+  jaws:
     image: jeffersonlab/jaws-libp:4.6.3
     tty: true
     stdin_open: true
-    hostname: jaws-libp
-    container_name: jaws-libp
+    hostname: jaws
+    container_name: jaws
     depends_on:
       - kafka
       - registry

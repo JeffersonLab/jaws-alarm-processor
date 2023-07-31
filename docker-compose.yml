@@ -9,16 +9,16 @@ services:
       file: deps.yml
       service: registry
 
-  jaws-libp:
+  jaws:
     extends:
       file: deps.yml
-      service: jaws-libp
+      service: jaws
 
   effective:
     hostname: effective
     container_name: effective
     depends_on:
-      - jaws-libp
+      - jaws
     environment:
       BOOTSTRAP_SERVERS: "kafka:9092"
       SCHEMA_REGISTRY: "http://registry:8081"

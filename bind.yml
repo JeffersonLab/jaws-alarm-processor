@@ -9,10 +9,10 @@ services:
       file: build.yml
       service: registry
 
-  jaws-libp:
+  jaws:
     extends:
       file: build.yml
-      service: jaws-libp
+      service: jaws
 
   effective:
     extends:
