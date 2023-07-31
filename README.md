@@ -28,7 +28,7 @@ docker exec -it jaws list_overrides --monitor
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec -it jaws set_override --override Shelved alarm1 --reason Other --expirationseconds 5
+docker exec jaws set_override --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 **See**: [Docker Compose Strategy](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c)
 
