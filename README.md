@@ -30,7 +30,6 @@ docker exec -it jaws list_overrides --monitor
 ```
 docker exec jaws set_override --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
-**See**: [Docker Compose Strategy](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c)
 
 **See**: More [Usage Examples](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Usage-Examples)
 
