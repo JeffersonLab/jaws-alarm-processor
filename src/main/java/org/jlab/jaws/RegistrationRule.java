@@ -88,7 +88,7 @@ public class RegistrationRule extends ProcessingRule {
                 });
 
         final KStream<String, IntermediateMonolog> withHeaders = classesAndRegistered.toStream()
-                .transform(new MonologAddHeadersFactory());
+                .process(new MonologAddHeadersFactory());
 
         KStream<String, EffectiveRegistration> effective = withHeaders.mapValues(new ValueMapper<IntermediateMonolog, EffectiveRegistration>() {
             @Override

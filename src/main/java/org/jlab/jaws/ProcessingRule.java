@@ -6,9 +6,9 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.Transformer;
-import org.apache.kafka.streams.kstream.TransformerSupplier;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
 import org.apache.kafka.streams.processor.api.Record;
 import org.jlab.jaws.entity.IntermediateMonolog;
 import org.slf4j.Logger;
@@ -68,28 +68,6 @@ public abstract class ProcessingRule {
         streams.close();
     }
 
-    void setHeaders(ProcessorContext context) {
-        Headers headers = context.headers();
-
-        if (headers != null) {
-            log.debug("adding headers");
-
-            String host = "unknown";
-
-            try {
-                host = InetAddress.getLocalHost().getHostName();
-            } catch (UnknownHostException e) {
-                log.debug("Unable to obtain host name");
-            }
-
-            headers.add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
-            headers.add("producer", "jaws-effective-processor".getBytes(StandardCharsets.UTF_8));
-            headers.add("host", host.getBytes(StandardCharsets.UTF_8));
-        } else {
-            log.debug("Headers are unavailable");
-        }
-    }
-
     public static void populateHeaders(Record<? extends Object, ? extends Object> record) {
         String host = "unknown";
 
@@ -104,30 +82,34 @@ public abstract class ProcessingRule {
         record.headers().add("host", host.getBytes(StandardCharsets.UTF_8));
     }
 
-    public final class MonologAddHeadersFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
+    public final class MonologAddHeadersFactory implements ProcessorSupplier<String, IntermediateMonolog, String, IntermediateMonolog> {
 
         /**
-         * Return a new {@link Transformer} instance.
+         * Return a new {@link Processor} instance.
          *
-         * @return a new {@link Transformer} instance
+         * @return a new {@link Processor} instance
          */
         @Override
-        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
-            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
-                private ProcessorContext context;
+        public Processor<String, IntermediateMonolog, String, IntermediateMonolog> get() {
+            return new Processor<>() {
+                private ProcessorContext<String, IntermediateMonolog> context;
 
                 @Override
-                public void init(ProcessorContext context) {
+                public void init(ProcessorContext<String, IntermediateMonolog> context) {
                     this.context = context;
                 }
 
                 @Override
-                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Handling message: {}={}", key, value);
+                public void process(Record<String, IntermediateMonolog> input) {
+                    log.debug("Handling message: {}={}", input.key(), input.value());
 
-                    setHeaders(context);
+                    long timestamp = System.currentTimeMillis();
 
-                    return new KeyValue<>(key, value);
+                    Record<String, IntermediateMonolog> output = new Record<>(input.key(), input.value(), timestamp);
+
+                    populateHeaders(output);
+
+                    context.forward(output);
                 }
 
                 @Override
