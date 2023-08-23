@@ -7,7 +7,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
+import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
@@ -98,8 +101,8 @@ public class OneShotRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, IntermediateMonolog> passthrough = monologStream.transform(
-                new OneShotRule.MsgTransformerFactory(storeBuilder.name()),
+        final KStream<String, IntermediateMonolog> passthrough = monologStream.process(
+                new MyProcessorSupplier(storeBuilder.name()),
                 Named.as("OneShotTransitionProcessor"),
                 storeBuilder.name());
 
@@ -109,64 +112,70 @@ public class OneShotRule extends ProcessingRule {
         return builder.build();
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
+    private static final class MyProcessorSupplier implements ProcessorSupplier<String, IntermediateMonolog, String, IntermediateMonolog> {
 
         private final String storeName;
 
         /**
-         * Create a new MsgTransformerFactory.
+         * Create a new ProcessorSupplier.
          *
          * @param storeName The state store name
          */
-        public MsgTransformerFactory(String storeName) {
+        public MyProcessorSupplier(String storeName) {
             this.storeName = storeName;
         }
 
         /**
-         * Return a new {@link Transformer} instance.
+         * Return a new {@link Processor} instance.
          *
-         * @return a new {@link Transformer} instance
+         * @return a new {@link Processor} instance
          */
         @Override
-        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
-            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
+        public Processor<String, IntermediateMonolog, String, IntermediateMonolog> get() {
+            return new Processor<>() {
                 private KeyValueStore<String, String> store;
-                private ProcessorContext context;
+                private ProcessorContext<String, IntermediateMonolog> context;
 
                 @Override
-                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
-                public void init(ProcessorContext context) {
+                public void init(ProcessorContext<String, IntermediateMonolog> context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, String>) context.getStateStore(storeName);
+                    this.store = context.getStateStore(storeName);
                 }
 
                 @Override
-                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = " + key + ", value = " + value);
+                public void process(Record<String, IntermediateMonolog> input) {
+                    log.debug("Processing key = " + input.key() + ", value = " + input.value());
 
                     boolean unshelving = false;
 
                     // Skip the filter unless oneshot is set
-                    if(value.getNotification().getOverrides().getShelved() != null && value.getNotification().getOverrides().getShelved().getOneshot()) {
+                    if(input.value().getNotification().getOverrides().getShelved() != null
+                            && input.value().getNotification().getOverrides().getShelved().getOneshot()) {
 
                         // Check if already unshelving in-progress
-                        unshelving = store.get(key) != null;
+                        unshelving = store.get(input.key()) != null;
 
                         // Check if we need to unshelve
-                        boolean needToUnshelve = value.getTransitions().getTransitionToNormal();
+                        boolean needToUnshelve = input.value().getTransitions().getTransitionToNormal();
 
                         if (needToUnshelve) {
                             unshelving = true;
                         }
                     }
 
-                    store.put(key, unshelving ? "y" : null);
+                    store.put(input.key(), unshelving ? "y" : null);
+
+                    long timestamp = System.currentTimeMillis();
+
+                    Record<String, IntermediateMonolog> output = new Record<>(input.key(), input.value(), timestamp);
+
+                    populateHeaders(output);
 
                     if (unshelving) { // Update transition state
-                        value.getTransitions().setUnshelving(true);
+                        output.value().getTransitions().setUnshelving(true);
                     }
 
-                    return new KeyValue<>(key, value);
+                    context.forward(output);
                 }
 
                 @Override

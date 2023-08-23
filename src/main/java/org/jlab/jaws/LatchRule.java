@@ -126,9 +126,9 @@ public class LatchRule extends ProcessingRule {
         }
 
         /**
-         * Return a new {@link Transformer} instance.
+         * Return a new {@link Processor} instance.
          *
-         * @return a new {@link Transformer} instance
+         * @return a new {@link Processor} instance
          */
         @Override
         public Processor<String, IntermediateMonolog, String, IntermediateMonolog> get() {
