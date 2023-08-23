@@ -36,4 +36,4 @@ RUN if [ -z "${CUSTOM_CRT_URL}" ] ; then echo "No custom cert needed"; else \
     && chmod -R g+rw ${APP_HOME}
 USER ${RUN_USER}
 ENTRYPOINT ["/docker-entrypoint.sh"]
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --start-interval=5s --retries=5 CMD test $(ps | grep jaws | wc -l) -gt 0
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --start-interval=5s --retries=5 CMD test $(ps | grep jaws | wc -l) -gt 1
