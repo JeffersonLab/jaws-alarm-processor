@@ -7,7 +7,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
+import org.apache.kafka.streams.processor.api.Record;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,8 +74,8 @@ public class EffectiveStateRule extends ProcessingRule {
         final KStream<String, IntermediateMonolog> monologStream = monologTable.toStream();
 
 
-        final KStream<String, IntermediateMonolog> calculated = monologStream.transform(
-                new EffectiveStateRule.MsgTransformerFactory(),
+        final KStream<String, IntermediateMonolog> calculated = monologStream.process(
+                new MyProcessorSupplier(),
                 Named.as("EffectiveStateTransitionProcessor"));
 
         final KStream<String, EffectiveAlarm> effectiveAlarms = calculated.mapValues(new ValueMapper<IntermediateMonolog, EffectiveAlarm>() {
@@ -102,12 +105,12 @@ public class EffectiveStateRule extends ProcessingRule {
         return builder.build();
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
+    private static final class MyProcessorSupplier implements ProcessorSupplier<String, IntermediateMonolog, String, IntermediateMonolog> {
 
         /**
-         * Create a new MsgTransformerFactory.
+         * Create a new ProcessorSupplier.
          */
-        public MsgTransformerFactory() {
+        public MyProcessorSupplier() {
 
         }
 
@@ -117,19 +120,25 @@ public class EffectiveStateRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
-            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
-                private ProcessorContext context;
+        public Processor<String, IntermediateMonolog, String, IntermediateMonolog> get() {
+            return new Processor<>() {
+                private ProcessorContext<String, IntermediateMonolog> context;
 
                 @Override
-                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
-                public void init(ProcessorContext context) {
+                public void init(ProcessorContext<String, IntermediateMonolog> context) {
                     this.context = context;
                 }
 
                 @Override
-                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getNotification(),value.getNotification().getOverrides(),value.getTransitions());
+                public void process(Record<String, IntermediateMonolog> input) {
+                    log.debug("Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
+                            input.key(),
+                            input.value().getRegistration().getInstance(),
+                            input.value().getNotification(),
+                            input.value().getNotification().getOverrides(),
+                            input.value().getTransitions());
+
+                    Record<String, IntermediateMonolog> output = null;
 
                     // If transitioning, we drop message as it's an intermediate message.
                     // This could introduce substantial latency and high
@@ -139,61 +148,69 @@ public class EffectiveStateRule extends ProcessingRule {
                     // notifications and alarms topics has double the number of messages (extra intermediate message
                     // generally can't be compacted as it's generally in the active segment with computed message due to
                     // proximity)
-                    if(value.getTransitions().getLatching() ||
-                       value.getTransitions().getOffdelaying() ||
-                       value.getTransitions().getOndelaying() ||
-                       value.getTransitions().getUnshelving() ||
-                       value.getTransitions().getMasking() ||
-                       value.getTransitions().getUnmasking()) {
-                        return null;
-                    }
+                    if(input.value().getTransitions().getLatching() ||
+                       input.value().getTransitions().getOffdelaying() ||
+                       input.value().getTransitions().getOndelaying() ||
+                       input.value().getTransitions().getUnshelving() ||
+                       input.value().getTransitions().getMasking() ||
+                       input.value().getTransitions().getUnmasking()) {
 
-                    // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
+                        // Forward nothing (null output)
+                    } else {
 
-                    AlarmState state = AlarmState.Normal;
+                        long timestamp = System.currentTimeMillis();
 
-                    if(value.getNotification().getActivation() != null && !(value.getNotification().getActivation().getUnion() instanceof NoActivation)) {
-                        state = AlarmState.Active;
-                    }
+                        output = new Record<>(input.key(), input.value(), timestamp);
 
-                    if(value.getNotification().getOverrides().getOffdelayed() != null) {
-                        state = AlarmState.ActiveOffDelayed;
-                    }
+                        // Note: overrides are evaluated in increasing precedence order (last item, disabled, has the highest precedence)
 
-                    if(value.getTransitions().getLatching() ||
-                            value.getNotification().getOverrides().getLatched() != null) {
-                        state = AlarmState.ActiveLatched;
-                    }
+                        AlarmState state = AlarmState.Normal;
 
-                    if(value.getNotification().getOverrides().getOndelayed() != null) {
-                        state = AlarmState.NormalOnDelayed;
-                    }
-
-                    if(value.getNotification().getOverrides().getShelved() != null &&
-                            !value.getTransitions().getUnshelving()) {
-
-                        if(value.getNotification().getOverrides().getShelved().getOneshot()) {
-                            state = AlarmState.NormalOneShotShelved;
-                        } else {
-                            state = AlarmState.NormalContinuousShelved;
+                        if (output.value().getNotification().getActivation() != null && !(output.value().getNotification().getActivation().getUnion() instanceof NoActivation)) {
+                            state = AlarmState.Active;
                         }
+
+                        if (output.value().getNotification().getOverrides().getOffdelayed() != null) {
+                            state = AlarmState.ActiveOffDelayed;
+                        }
+
+                        if (output.value().getTransitions().getLatching() ||
+                                output.value().getNotification().getOverrides().getLatched() != null) {
+                            state = AlarmState.ActiveLatched;
+                        }
+
+                        if (output.value().getNotification().getOverrides().getOndelayed() != null) {
+                            state = AlarmState.NormalOnDelayed;
+                        }
+
+                        if (output.value().getNotification().getOverrides().getShelved() != null &&
+                                !output.value().getTransitions().getUnshelving()) {
+
+                            if (output.value().getNotification().getOverrides().getShelved().getOneshot()) {
+                                state = AlarmState.NormalOneShotShelved;
+                            } else {
+                                state = AlarmState.NormalContinuousShelved;
+                            }
+                        }
+
+                        if (output.value().getNotification().getOverrides().getMasked() != null) {
+                            state = AlarmState.NormalMasked;
+                        }
+
+                        if (output.value().getNotification().getOverrides().getFiltered() != null) {
+                            state = AlarmState.NormalFiltered;
+                        }
+
+                        if (output.value().getNotification().getOverrides().getDisabled() != null) {
+                            state = AlarmState.NormalDisabled;
+                        }
+
+                        output.value().getNotification().setState(state);
+
+                        populateHeaders(output);
+
+                        context.forward(output);
                     }
-
-                    if(value.getNotification().getOverrides().getMasked() != null) {
-                        state = AlarmState.NormalMasked;
-                    }
-
-                    if(value.getNotification().getOverrides().getFiltered() != null) {
-                        state = AlarmState.NormalFiltered;
-                    }
-
-                    if(value.getNotification().getOverrides().getDisabled() != null) {
-                        state = AlarmState.NormalDisabled;
-                    }
-
-                    value.getNotification().setState(state);
-
-                    return new KeyValue<>(key, value);
                 }
 
                 @Override
