@@ -4,8 +4,11 @@ import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.processor.Cancellable;
-import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
+import org.apache.kafka.streams.processor.api.Record;
 import org.jlab.jaws.entity.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,7 +76,7 @@ public class ShelveExpirationRule extends ProcessingRule {
             }
         });
 
-        final KStream<AlarmOverrideKey, AlarmOverrideUnion> output = shelvedOnly.transform(new MsgTransformerFactory());
+        final KStream<AlarmOverrideKey, AlarmOverrideUnion> output = shelvedOnly.process(new MyProcessorSupplier());
 
         output.to(outputTopic, Produced.with(OUTPUT_KEY_SERDE, OUTPUT_VALUE_SERDE));
 
@@ -81,34 +84,34 @@ public class ShelveExpirationRule extends ProcessingRule {
     }
 
     /**
-     * Factory to create Kafka Streams Transformer instances; references a stateStore to maintain previous
+     * Factory to create Kafka Streams Processor instances; references a stateStore to maintain previous
      * RegisteredAlarms.
      */
-    private final class MsgTransformerFactory implements TransformerSupplier<AlarmOverrideKey, AlarmOverrideUnion, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>> {
+    private final class MyProcessorSupplier implements ProcessorSupplier<AlarmOverrideKey, AlarmOverrideUnion, AlarmOverrideKey, AlarmOverrideUnion> {
 
         /**
-         * Return a new {@link Transformer} instance.
+         * Return a new {@link Processor} instance.
          *
-         * @return a new {@link Transformer} instance
+         * @return a new {@link Processor} instance
          */
         @Override
-        public Transformer<AlarmOverrideKey, AlarmOverrideUnion, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>> get() {
-            return new Transformer<AlarmOverrideKey, AlarmOverrideUnion, KeyValue<AlarmOverrideKey, AlarmOverrideUnion>>() {
-                private ProcessorContext context;
+        public Processor<AlarmOverrideKey, AlarmOverrideUnion, AlarmOverrideKey, AlarmOverrideUnion> get() {
+            return new Processor<>() {
+                private ProcessorContext<AlarmOverrideKey, AlarmOverrideUnion> context;
 
                 @Override
-                public void init(ProcessorContext context) {
+                public void init(ProcessorContext<AlarmOverrideKey, AlarmOverrideUnion> context) {
                     this.context = context;
                 }
 
                 @Override
-                public KeyValue<AlarmOverrideKey, AlarmOverrideUnion> transform(AlarmOverrideKey key, AlarmOverrideUnion value) {
+                public void process(Record<AlarmOverrideKey, AlarmOverrideUnion> input) {
                     KeyValue<AlarmOverrideKey, AlarmOverrideUnion> result = null; // null returned to mean no record
 
-                    log.debug("Handling message: {}={}", key, value);
+                    log.debug("Handling message: {}={}", input.key(), input.value());
 
                     // Get (and remove) timer handle (if exists)
-                    Cancellable handle = channelHandleMap.remove(key.getName());
+                    Cancellable handle = channelHandleMap.remove(input.key().getName());
 
                     // If exists, we always cancel timers
                     if (handle != null) {
@@ -118,11 +121,11 @@ public class ShelveExpirationRule extends ProcessingRule {
                         log.debug("No Timer exists");
                     }
 
-
                     ShelvedOverride sa = null;
 
-                    if(value != null && value.getUnion() instanceof ShelvedOverride) {
-                        sa = (ShelvedOverride) value.getUnion();
+                    if(input.value() != null
+                            && input.value().getUnion() instanceof ShelvedOverride) {
+                        sa = (ShelvedOverride) input.value().getUnion();
                     }
 
                     if (sa != null && sa.getExpiration() > 0) { // Set new timer
@@ -132,23 +135,27 @@ public class ShelveExpirationRule extends ProcessingRule {
                         if (now.isAfter(ts)) {
                             delayInSeconds = 0; // If expiration is in the past then expire immediately
                         }
-                        log.debug("Scheduling {} for delay of: {} seconds ", key, delayInSeconds);
+                        log.debug("Scheduling {} for delay of: {} seconds ", input.key(), delayInSeconds);
 
                         Cancellable newHandle = context.schedule(Duration.ofSeconds(delayInSeconds), PunctuationType.WALL_CLOCK_TIME, timestamp -> {
-                            log.debug("Punctuation triggered for: {}", key);
+                            log.debug("Punctuation triggered for: {}", input.key());
 
                             // Attempt to cancel timer immediately so only run once; can fail if schedule doesn't return fast enough before timer triggered!
-                            Cancellable h = channelHandleMap.remove(key.getName());
+                            Cancellable h = channelHandleMap.remove(input.key().getName());
                             if(h != null) {
                                 h.cancel();
                             }
 
-                            setHeaders(context);
+                            long time = System.currentTimeMillis();
 
-                            context.forward(key, null);
+                            Record<AlarmOverrideKey, AlarmOverrideUnion> output = new Record<>(input.key(), null, time);
+
+                            populateHeaders(output);
+
+                            context.forward(output);
                         });
 
-                        Cancellable oldHandle = channelHandleMap.put(key.getName(), newHandle);
+                        Cancellable oldHandle = channelHandleMap.put(input.key().getName(), newHandle);
 
                         // This is to ensure we cancel every timer before losing it's handle otherwise it'll run forever (they repeat until cancelled)
                         if(oldHandle != null) { // This should only happen if timer callback is unable to cancel future runs (because handle assignment in map too slow)
@@ -157,8 +164,6 @@ public class ShelveExpirationRule extends ProcessingRule {
                     } else {
                         log.debug("Either null value or null expiration so no timer set!");
                     }
-
-                    return result; // We never return anything but null here because records are produced async
                 }
 
                 @Override

@@ -90,7 +90,7 @@ public abstract class ProcessingRule {
         }
     }
 
-    public static void populateHeaders(Record<String, ? extends Object> record) {
+    public static void populateHeaders(Record<? extends Object, ? extends Object> record) {
         String host = "unknown";
 
         try {
