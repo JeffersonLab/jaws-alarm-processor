@@ -7,7 +7,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
+import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
@@ -96,8 +99,8 @@ public class LatchRule extends ProcessingRule {
 
         builder.addStateStore(storeBuilder);
 
-        final KStream<String, IntermediateMonolog> passthrough = monologStream.transform(
-                new MsgTransformerFactory(storeBuilder.name()),
+        final KStream<String, IntermediateMonolog> passthrough = monologStream.process(
+                new MyProcessorSupplier(storeBuilder.name()),
                 Named.as("LatchTransitionProcessor"),
                 storeBuilder.name());
 
@@ -109,16 +112,16 @@ public class LatchRule extends ProcessingRule {
         return top;
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
+    private static final class MyProcessorSupplier implements ProcessorSupplier<String, IntermediateMonolog, String, IntermediateMonolog> {
 
         private final String storeName;
 
         /**
-         * Create a new MsgTransformerFactory.
+         * Create a new ProcessorSupplier.
          *
          * @param storeName The state store name
          */
-        public MsgTransformerFactory(String storeName) {
+        public MyProcessorSupplier(String storeName) {
             this.storeName = storeName;
         }
 
@@ -128,33 +131,42 @@ public class LatchRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
-            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
+        public Processor<String, IntermediateMonolog, String, IntermediateMonolog> get() {
+            return new Processor<>() {
                 private KeyValueStore<String, String> store;
-                private ProcessorContext context;
+                private ProcessorContext<String, IntermediateMonolog> context;
 
                 @Override
-                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
-                public void init(ProcessorContext context) {
+                public void init(ProcessorContext<String, IntermediateMonolog> context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, String>) context.getStateStore(storeName);
+                    this.store = context.getStateStore(storeName);
                 }
 
                 @Override
-                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
-                    log.debug("Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}", key, value.getRegistration().getInstance(),value.getNotification().getActivation(),value.getNotification().getOverrides(),value.getTransitions());
+                public void process(Record<String, IntermediateMonolog> input) {
+                    log.debug("Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
+                            input.key(),
+                            input.value().getRegistration().getInstance(),
+                            input.value().getNotification().getActivation(),
+                            input.value().getNotification().getOverrides(),
+                            input.value().getTransitions());
+
+                    long timestamp = System.currentTimeMillis();
+
+                    Record<String, IntermediateMonolog> output = new Record<>(input.key(), input.value(), timestamp);
 
                     // Skip the filter unless latchable is registered
-                    if(value.getRegistration().getClass$() != null && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatchable())) {
+                    if(output.value().getRegistration().getClass$() != null
+                            && Boolean.TRUE.equals(output.value().getRegistration().getClass$().getLatchable())) {
 
                         // Check if already latching in-progress
-                        boolean latching = store.get(key) != null;
+                        boolean latching = store.get(output.key()) != null;
 
                         // Check if latched
-                        boolean latched = value.getNotification().getOverrides().getLatched() != null;
+                        boolean latched = output.value().getNotification().getOverrides().getLatched() != null;
 
                         // Check if we need to latch
-                        boolean needToLatch = value.getTransitions().getTransitionToActive();
+                        boolean needToLatch = output.value().getTransitions().getTransitionToActive();
 
                         if (latched) {
                             latching = false;
@@ -163,17 +175,19 @@ public class LatchRule extends ProcessingRule {
                         }
 
                         if (latching) { // Update transition state
-                            value.getTransitions().setLatching(true);
+                            output.value().getTransitions().setLatching(true);
                         }
 
                         log.debug("latched: " + latched);
                         log.debug("needToLatch: " + needToLatch);
                         log.debug("latching: " + latching);
 
-                        store.put(key, latching ? "y" : null);
+                        store.put(output.key(), latching ? "y" : null);
                     }
 
-                    return new KeyValue<>(key, value);
+                    populateHeaders(output);
+
+                    context.forward(output);
                 }
 
                 @Override
