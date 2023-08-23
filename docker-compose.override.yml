@@ -1,3 +1,3 @@
 services:
   effective:
-    image: jeffersonlab/jaws-effective-processor:4.3.0
+    image: jeffersonlab/jaws-effective-processor:4.4.0
