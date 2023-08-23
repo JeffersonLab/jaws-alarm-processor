@@ -9,6 +9,7 @@ import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Transformer;
 import org.apache.kafka.streams.kstream.TransformerSupplier;
 import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Record;
 import org.jlab.jaws.entity.IntermediateMonolog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,6 +88,20 @@ public abstract class ProcessingRule {
         } else {
             log.debug("Headers are unavailable");
         }
+    }
+
+    public static void populateHeaders(Record<String, ? extends Object> record) {
+        String host = "unknown";
+
+        try {
+            host = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            log.debug("Unable to obtain host name");
+        }
+
+        record.headers().add("user", System.getProperty("user.name").getBytes(StandardCharsets.UTF_8));
+        record.headers().add("producer", "registrations2epics".getBytes(StandardCharsets.UTF_8));
+        record.headers().add("host", host.getBytes(StandardCharsets.UTF_8));
     }
 
     public final class MonologAddHeadersFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {

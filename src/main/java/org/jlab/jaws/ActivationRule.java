@@ -7,7 +7,10 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.ProcessorSupplier;
+import org.apache.kafka.streams.processor.api.Record;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
@@ -114,14 +117,11 @@ public class ActivationRule extends ProcessingRule {
 
         // Ensure we always return non-null Alarm record and populate it with transition state
         final KStream<String, IntermediateMonolog> withTransitionState = plusOverrides.toStream()
-                .transform(new ActivationRule.MsgTransformerFactory(storeBuilder.name()),
+                .process(new MyProcessorSupplier(storeBuilder.name()),
                         Named.as("ActiveTransitionStateProcessor"),
                         storeBuilder.name());
 
-        final KStream<String, IntermediateMonolog> withHeaders = withTransitionState
-                .transform(new MonologAddHeadersFactory());
-
-        withHeaders.to(outputTopic, Produced.as("Monolog")
+        withTransitionState.to(outputTopic, Produced.as("Monolog")
                 .with(MONOLOG_KEY_SERDE, MONOLOG_VALUE_SERDE));
 
         return builder.build();
@@ -272,16 +272,16 @@ public class ActivationRule extends ProcessingRule {
         return new KeyValue<>(key.getName(), new OverrideList(list));
     }
 
-    private static final class MsgTransformerFactory implements TransformerSupplier<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> {
+    private static final class MyProcessorSupplier implements ProcessorSupplier<String, IntermediateMonolog, String, IntermediateMonolog> {
 
         private final String storeName;
 
         /**
-         * Create a new MsgTransformerFactory.
+         * Create a new ProcessorSupplier.
          *
          * @param storeName The state store name
          */
-        public MsgTransformerFactory(String storeName) {
+        public MyProcessorSupplier(String storeName) {
             this.storeName = storeName;
         }
 
@@ -291,24 +291,28 @@ public class ActivationRule extends ProcessingRule {
          * @return a new {@link Transformer} instance
          */
         @Override
-        public Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>> get() {
-            return new Transformer<String, IntermediateMonolog, KeyValue<String, IntermediateMonolog>>() {
+        public Processor<String, IntermediateMonolog, String, IntermediateMonolog> get() {
+            return new Processor<>() {
                 private KeyValueStore<String, AlarmActivationUnion> store;
-                private ProcessorContext context;
+                private ProcessorContext<String, IntermediateMonolog> context;
 
                 @Override
-                @SuppressWarnings("unchecked") // https://cwiki.apache.org/confluence/display/KAFKA/KIP-478+-+Strongly+typed+Processor+API
-                public void init(ProcessorContext context) {
+                public void init(ProcessorContext<String, IntermediateMonolog> context) {
                     this.context = context;
-                    this.store = (KeyValueStore<String, AlarmActivationUnion>) context.getStateStore(storeName);
+                    this.store = context.getStateStore(storeName);
                 }
 
                 @Override
-                public KeyValue<String, IntermediateMonolog> transform(String key, IntermediateMonolog value) {
+                public void process(Record<String, IntermediateMonolog> input) {
+
+                    long timestamp = System.currentTimeMillis();
+
+                    Record<String, IntermediateMonolog> output;
+
                     // Handle Scenario where only one of Registration or Activation and it just got tombstoned!
                     // Instead of forwarding IntermediateMonolog = null we always forward non-null IntermediateMonolog,
                     // but fields inside may be null
-                    if(value == null) {
+                    if(input.value() == null) {
                         EffectiveRegistration effectiveReg = EffectiveRegistration.newBuilder().build();
 
                         EffectiveNotification effectiveNot = EffectiveNotification.newBuilder()
@@ -316,17 +320,21 @@ public class ActivationRule extends ProcessingRule {
                                 .setState(AlarmState.Normal)
                                 .build();
 
-                        value = IntermediateMonolog.newBuilder()
+                        IntermediateMonolog emptyMono = IntermediateMonolog.newBuilder()
                                 .setRegistration(effectiveReg)
                                 .setNotification(effectiveNot)
                                 .setTransitions(new ProcessorTransitions())
                                 .build();
+
+                        output = new Record<>(input.key(), emptyMono, timestamp);
+                    } else {
+                        output = new Record<>(input.key(), input.value(), timestamp);
                     }
 
-                    AlarmActivationUnion previous = store.get(key);
+                    AlarmActivationUnion previous = store.get(input.key());
                     AlarmActivationUnion next = null;
 
-                    next = value.getNotification().getActivation();
+                    next = output.value().getNotification().getActivation();
 
                     // We substitute null for NoActivation to ensure non-null means real activation
                     if(next != null && next.getUnion() instanceof NoActivation) {
@@ -347,14 +355,16 @@ public class ActivationRule extends ProcessingRule {
                         transitionToNormal = true;
                     }
 
-                    store.put(key, next);
+                    store.put(input.key(), next);
 
-                    value.getTransitions().setTransitionToActive(transitionToActive);
-                    value.getTransitions().setTransitionToNormal(transitionToNormal);
+                    output.value().getTransitions().setTransitionToActive(transitionToActive);
+                    output.value().getTransitions().setTransitionToNormal(transitionToNormal);
 
-                    log.trace("Transformed: {}={}", key, value);
+                    populateHeaders(output);
 
-                    return new KeyValue<>(key, value);
+                    log.trace("Transformed: {}={} -> {}", input.key(), input.value(), output);
+
+                    context.forward(output);
                 }
 
                 @Override
