@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 ARG BUILD_IMAGE=gradle:7.4-jdk17-alpine
 ARG RUN_IMAGE=eclipse-temurin:11-alpine
 ARG CUSTOM_CRT_URL=http://pki.jlab.org/JLabCA.crt
@@ -35,3 +36,4 @@ RUN if [ -z "${CUSTOM_CRT_URL}" ] ; then echo "No custom cert needed"; else \
     && chmod -R g+rw ${APP_HOME}
 USER ${RUN_USER}
 ENTRYPOINT ["/docker-entrypoint.sh"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --start-interval=5s --retries=5 CMD test $(ps | grep jaws | wc -l) -gt 0

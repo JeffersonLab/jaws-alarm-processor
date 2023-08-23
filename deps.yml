@@ -17,8 +17,9 @@ services:
       - KAFKA_CFG_LOG_ROLL_MS=300000
     healthcheck:
       test: kafka-topics.sh --bootstrap-server kafka:9092 --list
-      start_period: 10s
-      interval: 5s
+      start_period: 30s
+      start_interval: 5s
+      interval: 30s
       timeout: 10s
       retries: 5
 
@@ -26,6 +27,13 @@ services:
     image: bitnami/schema-registry:7.4
     hostname: registry
     container_name: registry
+    healthcheck:
+      test: schema-registry-run-class io.confluent.kafka.schemaregistry.tools.SchemaRegistryPerformance http://localhost:8081 healthcheck 1 1 JSON
+      start_period: 30s
+      start_interval: 5s
+      interval: 30s
+      timeout: 10s
+      retries: 5
     depends_on:
       kafka:
         condition: service_healthy
@@ -36,14 +44,14 @@ services:
       - SCHEMA_REGISTRY_KAFKA_BROKERS=PLAINTEXT://kafka:9092
 
   jaws:
-    image: jeffersonlab/jaws-libp:4.6.3
+    image: jeffersonlab/jaws-libp:4.7.0
     tty: true
     stdin_open: true
     hostname: jaws
     container_name: jaws
     depends_on:
-      - kafka
-      - registry
+      registry:
+        condition: service_healthy
     environment:
       - TZ=America/New_York
       - BOOTSTRAP_SERVERS=kafka:9092
