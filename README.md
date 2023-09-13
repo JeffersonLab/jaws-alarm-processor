@@ -7,7 +7,8 @@ Read more about [Overrides and Effective State](https://github.com/JeffersonLab/
  - [Quick Start with Compose](https://github.com/JeffersonLab/jaws-effective-processor#quick-start-with-compose)
  - [Install](https://github.com/JeffersonLab/jaws-effective-processor#install) 
  - [Configure](https://github.com/JeffersonLab/jaws-effective-processor#configure)
- - [Build](https://github.com/JeffersonLab/jaws-effective-processor#build) 
+ - [Build](https://github.com/JeffersonLab/jaws-effective-processor#build)
+ - [Develop](https://github.com/JeffersonLab/jaws-effective-processor#develop)  
  - [Release](https://github.com/JeffersonLab/jaws-effective-processor#release)  
  - [See Also](https://github.com/JeffersonLab/jaws-effective-processor#see-also)
  ---
@@ -72,6 +73,21 @@ gradlew build
 **Note for JLab On-Site Users**: Jefferson Lab has an intercepting [proxy](https://gist.github.com/slominskir/92c25a033db93a90184a5994e71d0b78)
 
 **See**: [Docker Development Quick Reference](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c#development-quick-reference)
+
+## Develop
+In order to iterate rapidly when making changes it's often useful to run the app directly on the local workstation, perhaps leveraging an IDE. In this scenario run the service dependencies with:
+```
+docker compose -f deps.yml up
+```
+Then run the app with:
+```
+gradlew run
+```
+
+**Note**: Javadocs can be generated with the command:
+```
+gradlew javadoc
+```
 
 ## Release
 1. Bump the version number in build.gradle and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).
