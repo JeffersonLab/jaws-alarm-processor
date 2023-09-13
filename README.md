@@ -54,10 +54,11 @@ bin/jaws-effective-processor.bat
 ## Configure
 Environment Variables
 
-| Name | Description |
-|---|---|
-| BOOTSTRAP_SERVERS | Comma-separated list of host and port pairs pointing to a Kafka server to bootstrap the client connection to a Kafka Cluser; example: `kafka:9092` |
-| SCHEMA_REGISTRY | URL to Confluent Schema Registry; example: `http://registry:8081` |
+| Name              | Description                                                                                                                                                                                                                                                                                                         |
+|-------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| BOOTSTRAP_SERVERS | Comma-separated list of host and port pairs pointing to a Kafka server to bootstrap the client connection to a Kafka Cluser; example: `kafka:9092`                                                                                                                                                                  |
+| SCHEMA_REGISTRY   | URL to Confluent Schema Registry; example: `http://registry:8081`                                                                                                                                                                                                                                                   |
+| STATE_DIR         | Directory where local Kafka Streams state is stored [[1](https://kafka.apache.org/documentation/#streamsconfigs_state.dir)], [[2](https://kafka.apache.org//documentation/streams/developer-guide/app-reset-tool)].  Defaults to `java.io.tmp` system property value with an appended subdir named `kafka-streams`. |
 
 ## Build
 This project is built with [Java 17](https://adoptium.net/) (compiled to Java 11 bytecode), and uses the [Gradle 7](https://gradle.org/) build tool to automatically download dependencies and build the project from source:
@@ -83,6 +84,8 @@ Then run the app with:
 ```
 gradlew run
 ```
+
+**Note**: The `STATE_DIR` config is set to the gradle `build` dir such that running a `clean` task will clear the local state.  You may need to reset the Kafka server state after running a clean task by restarting Kafka from scratch else using the [Reset Tool](https://kafka.apache.org//documentation/streams/developer-guide/app-reset-tool). 
 
 **Note**: Javadocs can be generated with the command:
 ```

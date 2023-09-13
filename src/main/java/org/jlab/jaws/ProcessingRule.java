@@ -12,6 +12,7 @@ import org.jlab.jaws.entity.IntermediateMonolog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
@@ -41,12 +42,18 @@ public abstract class ProcessingRule {
         String registry = System.getenv("SCHEMA_REGISTRY");
         registry = (registry == null) ? "http://localhost:8081" : registry;
 
+        String tmpDir = System.getProperty("java.io.tmpdir");
+        String stateDir = System.getenv("STATE_DIR");
+        stateDir = (stateDir == null) ? tmpDir + File.separator + "kafka-streams" : stateDir;
+
+
         final Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "jaws-effective-processor");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(StreamsConfig.STATESTORE_CACHE_MAX_BYTES_CONFIG, 0); // Disable caching
         props.put(SCHEMA_REGISTRY_URL_CONFIG, registry);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(StreamsConfig.STATE_DIR_CONFIG, stateDir);
 
         return props;
     }
