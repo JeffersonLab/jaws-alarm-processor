@@ -133,7 +133,7 @@ public class ShelveExpirationRule extends ProcessingRule {
                         Instant now = Instant.now();
                         long delayInSeconds = Duration.between(now, ts).getSeconds();
                         if (now.isAfter(ts)) {
-                            delayInSeconds = 0; // If expiration is in the past then expire immediately
+                            delayInSeconds = 1; // If expiration is in the past then expire immediately (zero is invalid)
                         }
                         log.debug("Scheduling {} for delay of: {} seconds ", input.key(), delayInSeconds);
 
