@@ -36,12 +36,8 @@ docker exec jaws set_override --override Shelved alarm1 --reason Other --expirat
 ## Install
 This application requires a Java 11+ JVM and standard library to run.
 
-Download from [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) or [build](https://github.com/JeffersonLab/jaws-effective-processor#build) yourself.
+Download from [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) or [build](https://github.com/JeffersonLab/jaws-effective-processor#build) the [distribution](https://github.com/JeffersonLab/jaws-effective-processor#release) yourself.
 
-Start scripts are created and dependencies collected by the Gradle distribution target:
-```
-gradlew assembleDist
-```
 
 Launch with:
 
@@ -78,10 +74,14 @@ gradlew build
 **See**: [Docker Development Quick Reference](https://gist.github.com/slominskir/a7da801e8259f5974c978f9c3091d52c#development-quick-reference)
 
 ## Release
-1. Bump the version number in build.gradle and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).   
-1. Create a new release on the GitHub [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) page corresponding to same version in build.gradle (Enumerate changes and link issues).   Run dist build and attach zip to release.
-1. [Publish to DockerHub](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/docker-publish.yml) GitHub Action should run automatically.
-1. Bump and commit quick start [image version](https://github.com/JeffersonLab/jaws-effective-processor/blob/main/docker-compose.override.yml) after confirming new image works
+1. Bump the version number in build.gradle and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).
+1. Run the Gradle distribution target:
+```
+gradlew assembleDist
+```   
+3. Create a new release on the GitHub [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) page corresponding to same version in build.gradle (Enumerate changes and link issues).   Attach the generated distribution zip to the release.
+4. [Publish to DockerHub](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/docker-publish.yml) GitHub Action should run automatically.
+5. Bump and commit quick start [image version](https://github.com/JeffersonLab/jaws-effective-processor/blob/main/docker-compose.override.yml) after confirming new image works
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
