@@ -60,7 +60,9 @@ distTar.dependsOn(generateLicenseReport)
 distZip.dependsOn(generateLicenseReport)
 
 run {
-    classpath += files('config')
+    classpath += files('src/test/resources')
+    environment "BOOTSTRAP_SERVERS", "localhost:9094"
+    environment "SCHEMA_REGISTRY", "http://localhost:8081"
 }
 
 distributions {
