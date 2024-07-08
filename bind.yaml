@@ -1,22 +1,22 @@
 services:
   kafka:
     extends:
-      file: build.yml
+      file: build.yaml
       service: kafka
 
   registry:
     extends:
-      file: build.yml
+      file: build.yaml
       service: registry
 
   jaws:
     extends:
-      file: build.yml
+      file: build.yaml
       service: jaws
 
   effective:
     extends:
-      file: build.yml
+      file: build.yaml
       service: effective
     volumes:
       - ./docker-entrypoint.sh:/docker-entrypoint.sh
