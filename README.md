@@ -1,4 +1,4 @@
-# jaws-effective-processor [![CI](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yml/badge.svg)](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yml) [![Docker](https://img.shields.io/docker/v/jeffersonlab/jaws-effective-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/jeffersonlab/jaws-effective-processor)
+# jaws-effective-processor [![CI](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yaml/badge.svg)](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/ci.yaml) [![Docker](https://img.shields.io/docker/v/jeffersonlab/jaws-effective-processor?sort=semver&label=DockerHub)](https://hub.docker.com/r/jeffersonlab/jaws-effective-processor)
 A set of connected [Kafka Streams](https://kafka.apache.org/documentation/streams/) apps for [JAWS](https://github.com/JeffersonLab/jaws) that process alarm registration and notification data and compute effective state.  
 
 Read more about [Overrides and Effective State](https://github.com/JeffersonLab/jaws/wiki/Overrides-and-Effective-State) and [Software Design](https://github.com/JeffersonLab/jaws/wiki/Software-Design#effective-processor).
@@ -78,7 +78,7 @@ gradlew build
 ## Develop
 In order to iterate rapidly when making changes it's often useful to run the app directly on the local workstation, perhaps leveraging an IDE. In this scenario run the service dependencies with:
 ```
-docker compose -f deps.yml up
+docker compose -f deps.yaml up
 ```
 Then run the app with:
 ```
@@ -93,14 +93,10 @@ gradlew javadoc
 ```
 
 ## Release
-1. Bump the version number in build.gradle and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).
-1. Run the Gradle distribution target:
-```
-gradlew assembleDist
-```   
-3. Create a new release on the GitHub [Releases](https://github.com/JeffersonLab/jaws-effective-processor/releases) page corresponding to same version in build.gradle (Enumerate changes and link issues).   Attach the generated distribution zip to the release.
-4. [Publish to DockerHub](https://github.com/JeffersonLab/jaws-effective-processor/actions/workflows/docker-publish.yml) GitHub Action should run automatically.
-5. Bump and commit quick start [image version](https://github.com/JeffersonLab/jaws-effective-processor/blob/main/docker-compose.override.yml) after confirming new image works
+1. Bump the version number in the VERSION file and commit and push to GitHub (using [Semantic Versioning](https://semver.org/)).
+2. The [CD](https://github.com/JeffersonLab/jaws-effective-processor/blob/main/.github/workflows/cd.yaml) GitHub Action should run automatically invoking:
+    - The [Create release](https://github.com/JeffersonLab/java-workflows/blob/main/.github/workflows/gh-release.yaml) GitHub Action to tag the source and create release notes summarizing any pull requests.   Edit the release notes to add any missing details.  A war file artifact is attached to the release.
+    - The [Publish docker image](https://github.com/JeffersonLab/container-workflows/blob/main/.github/workflows/docker-publish.yaml) GitHub Action to create a new demo Docker image.
 
 ## See Also
    - [Developer Notes](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Developer-Notes)
