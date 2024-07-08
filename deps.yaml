@@ -47,7 +47,7 @@ services:
       - SCHEMA_REGISTRY_KAFKA_BROKERS=PLAINTEXT://kafka:9092
 
   jaws:
-    image: jeffersonlab/jaws-libp:4.8.0
+    image: jeffersonlab/jaws-libp:4.9.2
     tty: true
     stdin_open: true
     hostname: jaws

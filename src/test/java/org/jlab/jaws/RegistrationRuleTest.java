@@ -76,7 +76,6 @@ public class RegistrationRuleTest {
     class1.setFilterable(true);
     class1.setCorrectiveaction("fix it");
     class1.setPriority(AlarmPriority.P3_MINOR);
-    class1.setPointofcontactusername("tester");
     class1.setRationale("because");
 
     class1.setOffdelayseconds(5l);
