@@ -20,6 +20,7 @@ public class EffectiveProcessor {
 
     // async
     rules.add(new ShelveExpirationRule(OverrideProducer.TOPIC, OverrideProducer.TOPIC));
+    rules.add(new OnDelayExpirationRule(OverrideProducer.TOPIC, OverrideProducer.TOPIC));
 
     // pipelined
     rules.add(

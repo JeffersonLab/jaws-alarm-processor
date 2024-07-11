@@ -167,9 +167,10 @@ public class OnDelayRule extends ProcessingRule {
         @Override
         public void process(Record<String, IntermediateMonolog> input) {
           log.debug(
-              "Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
+              "Processing key = {}, value = \n\tInstance: {}\n\tClass: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
               input.key(),
               input.value().getRegistration().getInstance(),
+              input.value().getRegistration().getClass$(),
               input.value().getNotification().getActivation(),
               input.value().getNotification().getOverrides(),
               input.value().getTransitions());
@@ -204,9 +205,9 @@ public class OnDelayRule extends ProcessingRule {
               output.value().getTransitions().setOndelaying(true);
             }
 
-            log.debug("ondelayed: " + ondelayed);
-            log.debug("needToOnDelay: " + needToOnDelay);
-            log.debug("ondelaying: " + ondelaying);
+            log.debug("ondelayed: {}", ondelayed);
+            log.debug("needToOnDelay: {}", needToOnDelay);
+            log.debug("ondelaying: {}", ondelaying);
 
             store.put(output.key(), ondelaying ? "y" : null);
           }
