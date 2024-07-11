@@ -37,7 +37,9 @@ public class EffectiveProcessor {
     rules.add(
         new LatchRule("intermediate-activation", "intermediate-latch", OverrideProducer.TOPIC));
     rules.add(
-        new OneShotRule("intermediate-latch", "intermediate-oneshot", OverrideProducer.TOPIC));
+        new OnDelayRule("intermediate-latch", "intermediate-ondelay", OverrideProducer.TOPIC));
+    rules.add(
+        new OneShotRule("intermediate-ondelay", "intermediate-oneshot", OverrideProducer.TOPIC));
     rules.add(
         new EffectiveStateRule(
             "intermediate-oneshot",
