@@ -126,7 +126,14 @@ public class OnDelayExpirationRule extends ProcessingRule {
           // Get (and remove) timer handle (if exists)
           Cancellable handle = channelHandleMap.remove(input.key().getName());
 
-          // If exists, we always cancel timers
+          // If exists, we always cancel timers.
+          // Every time a new transition to active is encountered OnDelayRule creates a new
+          // OnDelayedOverride, and
+          // we cancel previous expiration if present and start anew.   We never cancel a timer just
+          // because it
+          // transitioned to normal (not active), so ondelay overrides persist until expiration
+          // UNLESS a new activation
+          // replaces it.
           if (handle != null) {
             log.debug("Timer Cancelled");
             handle.cancel();
