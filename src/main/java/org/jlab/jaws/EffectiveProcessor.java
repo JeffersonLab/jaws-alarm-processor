@@ -20,6 +20,7 @@ public class EffectiveProcessor {
 
     // async
     rules.add(new ShelveExpirationRule(OverrideProducer.TOPIC, OverrideProducer.TOPIC));
+    rules.add(new OnDelayExpirationRule(OverrideProducer.TOPIC, OverrideProducer.TOPIC));
 
     // pipelined
     rules.add(
@@ -37,7 +38,9 @@ public class EffectiveProcessor {
     rules.add(
         new LatchRule("intermediate-activation", "intermediate-latch", OverrideProducer.TOPIC));
     rules.add(
-        new OneShotRule("intermediate-latch", "intermediate-oneshot", OverrideProducer.TOPIC));
+        new OnDelayRule("intermediate-latch", "intermediate-ondelay", OverrideProducer.TOPIC));
+    rules.add(
+        new OneShotRule("intermediate-ondelay", "intermediate-oneshot", OverrideProducer.TOPIC));
     rules.add(
         new EffectiveStateRule(
             "intermediate-oneshot",
