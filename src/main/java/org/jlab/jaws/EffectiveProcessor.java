@@ -25,8 +25,8 @@ public class EffectiveProcessor {
     // pipelined
     rules.add(
         new RegistrationRule(
-            ClassProducer.TOPIC,
-            InstanceProducer.TOPIC,
+            ActionProducer.TOPIC,
+            AlarmProducer.TOPIC,
             EffectiveRegistrationProducer.TOPIC,
             "intermediate-registration"));
     rules.add(

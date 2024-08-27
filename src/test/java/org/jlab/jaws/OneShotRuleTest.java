@@ -17,9 +17,9 @@ public class OneShotRuleTest {
   private TestInputTopic<String, IntermediateMonolog> inputTopicMonolog;
   private TestOutputTopic<String, IntermediateMonolog> outputPassthroughTopic;
   private TestOutputTopic<AlarmOverrideKey, AlarmOverrideUnion> outputOverrideTopic;
-  private AlarmInstance instance1;
-  private AlarmInstance instance2;
-  private AlarmClass class1;
+  private Alarm instance1;
+  private Alarm instance2;
+  private AlarmAction class1;
   private AlarmActivationUnion active1;
   private AlarmActivationUnion active2;
   private IntermediateMonolog mono1;
@@ -51,20 +51,20 @@ public class OneShotRuleTest {
             OneShotRule.OVERRIDE_KEY_SERDE.deserializer(),
             OneShotRule.OVERRIDE_VALUE_SERDE.deserializer());
 
-    instance1 = new AlarmInstance();
-    instance2 = new AlarmInstance();
+    instance1 = new Alarm();
+    instance2 = new Alarm();
 
-    instance1.setAlarmclass("base");
+    instance1.setAction("base");
     instance1.setSource(new Source());
     instance1.setLocation(Arrays.asList("NL"));
 
-    instance2.setAlarmclass("base");
+    instance2.setAction("base");
     instance2.setSource(new Source());
     instance2.setLocation(Arrays.asList("NL"));
 
-    class1 = new AlarmClass();
+    class1 = new AlarmAction();
     class1.setLatchable(true);
-    class1.setCategory("CAMAC");
+    class1.setSystem("CAMAC");
     class1.setFilterable(true);
     class1.setCorrectiveaction("fix it");
     class1.setPriority(AlarmPriority.P3_MINOR);
@@ -77,7 +77,7 @@ public class OneShotRuleTest {
     active2.setUnion(new Activation());
 
     EffectiveRegistration effectiveReg =
-        EffectiveRegistration.newBuilder().setClass$(class1).setInstance(instance1).build();
+        EffectiveRegistration.newBuilder().setAction(class1).setAlarm(instance1).build();
 
     EffectiveNotification effectiveNot =
         EffectiveNotification.newBuilder()

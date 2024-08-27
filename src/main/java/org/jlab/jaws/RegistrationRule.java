@@ -29,9 +29,9 @@ public class RegistrationRule extends ProcessingRule {
   public static final Serdes.StringSerde INPUT_KEY_INSTANCES_SERDE = new Serdes.StringSerde();
   public static final Serdes.StringSerde INPUT_KEY_CLASSES_SERDE = new Serdes.StringSerde();
 
-  public static final SpecificAvroSerde<AlarmInstance> INPUT_VALUE_INSTANCES_SERDE =
+  public static final SpecificAvroSerde<Alarm> INPUT_VALUE_INSTANCES_SERDE =
       new SpecificAvroSerde<>();
-  public static final SpecificAvroSerde<AlarmClass> INPUT_VALUE_CLASSES_SERDE =
+  public static final SpecificAvroSerde<AlarmAction> INPUT_VALUE_CLASSES_SERDE =
       new SpecificAvroSerde<>();
 
   public static final Serdes.StringSerde EFFECTIVE_KEY_SERDE = new Serdes.StringSerde();
@@ -78,11 +78,11 @@ public class RegistrationRule extends ProcessingRule {
     EFFECTIVE_VALUE_SERDE.configure(config, false);
     MONOLOG_VALUE_SERDE.configure(config, false);
 
-    final KTable<String, AlarmClass> classesTable =
+    final KTable<String, AlarmAction> classesTable =
         builder.table(
             inputTopicClasses,
             Consumed.as("Classes-Table").with(INPUT_KEY_CLASSES_SERDE, INPUT_VALUE_CLASSES_SERDE));
-    final KTable<String, AlarmInstance> registeredTable =
+    final KTable<String, Alarm> registeredTable =
         builder.table(
             inputTopicInstances,
             Consumed.as("Instances-Table")
@@ -92,7 +92,7 @@ public class RegistrationRule extends ProcessingRule {
         registeredTable
             .leftJoin(
                 classesTable,
-                AlarmInstance::getAlarmclass,
+                Alarm::getAction,
                 new AlarmClassJoiner(),
                 Materialized.with(Serdes.String(), MONOLOG_VALUE_SERDE))
             .filter(
@@ -133,14 +133,14 @@ public class RegistrationRule extends ProcessingRule {
   }
 
   private final class AlarmClassJoiner
-      implements ValueJoiner<AlarmInstance, AlarmClass, IntermediateMonolog> {
+      implements ValueJoiner<Alarm, AlarmAction, IntermediateMonolog> {
 
-    public IntermediateMonolog apply(AlarmInstance instance, AlarmClass clazz) {
+    public IntermediateMonolog apply(Alarm alarm, AlarmAction action) {
 
       // System.err.println("class joiner: " + registered);
 
       EffectiveRegistration effectiveReg =
-          EffectiveRegistration.newBuilder().setClass$(clazz).setInstance(instance).build();
+          EffectiveRegistration.newBuilder().setAction(action).setAlarm(alarm).build();
 
       EffectiveNotification effectiveNot =
           EffectiveNotification.newBuilder()

@@ -82,8 +82,8 @@ public class LatchRule extends ProcessingRule {
               @Override
               public boolean test(String key, IntermediateMonolog value) {
                 log.debug("Filtering: " + key + ", value: " + value);
-                return value.getRegistration().getClass$() != null
-                    && Boolean.TRUE.equals(value.getRegistration().getClass$().getLatchable())
+                return value.getRegistration().getAction() != null
+                    && Boolean.TRUE.equals(value.getRegistration().getAction().getLatchable())
                     && value.getTransitions().getTransitionToActive();
               }
             });
@@ -164,7 +164,7 @@ public class LatchRule extends ProcessingRule {
           log.debug(
               "Processing key = {}, value = \n\tInstance: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
               input.key(),
-              input.value().getRegistration().getInstance(),
+              input.value().getRegistration().getAlarm(),
               input.value().getNotification().getActivation(),
               input.value().getNotification().getOverrides(),
               input.value().getTransitions());
@@ -175,8 +175,8 @@ public class LatchRule extends ProcessingRule {
               new Record<>(input.key(), input.value(), timestamp);
 
           // Skip the filter unless latchable is registered
-          if (output.value().getRegistration().getClass$() != null
-              && Boolean.TRUE.equals(output.value().getRegistration().getClass$().getLatchable())) {
+          if (output.value().getRegistration().getAction() != null
+              && Boolean.TRUE.equals(output.value().getRegistration().getAction().getLatchable())) {
 
             // Check if already latching in-progress
             boolean latching = store.get(output.key()) != null;

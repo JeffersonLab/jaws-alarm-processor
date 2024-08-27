@@ -17,9 +17,9 @@ public class EffectiveStateRuleTest {
   private TestInputTopic<String, IntermediateMonolog> inputTopic;
   private TestOutputTopic<String, EffectiveNotification> EffectiveNotificationTopic;
   private TestOutputTopic<String, EffectiveAlarm> effectiveAlarmTopic;
-  private AlarmInstance instance1;
-  private AlarmInstance instance2;
-  private AlarmClass class1;
+  private Alarm instance1;
+  private Alarm instance2;
+  private AlarmAction class1;
   private AlarmActivationUnion active1;
   private AlarmActivationUnion active2;
   private IntermediateMonolog mono1;
@@ -54,20 +54,20 @@ public class EffectiveStateRuleTest {
             rule.effectiveAlarmTopic,
             EffectiveStateRule.EFFECTIVE_ALARM_KEY_SERDE.deserializer(),
             EffectiveStateRule.EFFECTIVE_ALARM_VALUE_SERDE.deserializer());
-    instance1 = new AlarmInstance();
-    instance2 = new AlarmInstance();
+    instance1 = new Alarm();
+    instance2 = new Alarm();
 
-    instance1.setAlarmclass("base");
+    instance1.setAction("base");
     instance1.setSource(new Source());
     instance1.setLocation(Arrays.asList("NL"));
 
-    instance2.setAlarmclass("base");
+    instance2.setAction("base");
     instance2.setSource(new Source());
     instance2.setLocation(Arrays.asList("NL"));
 
-    class1 = new AlarmClass();
+    class1 = new AlarmAction();
     class1.setLatchable(true);
-    class1.setCategory("CAMAC");
+    class1.setSystem("CAMAC");
     class1.setFilterable(true);
     class1.setCorrectiveaction("fix it");
     class1.setPriority(AlarmPriority.P3_MINOR);
@@ -80,7 +80,7 @@ public class EffectiveStateRuleTest {
     active2.setUnion(new Activation());
 
     EffectiveRegistration effectiveReg =
-        EffectiveRegistration.newBuilder().setClass$(class1).setInstance(instance1).build();
+        EffectiveRegistration.newBuilder().setAction(class1).setAlarm(instance1).build();
 
     effectiveNot =
         EffectiveNotification.newBuilder()
@@ -116,7 +116,7 @@ public class EffectiveStateRuleTest {
 
   @Test
   public void latching() {
-    mono1.getRegistration().getClass$().setLatchable(true);
+    mono1.getRegistration().getAction().setLatchable(true);
     mono1.getNotification().setActivation(null);
     mono1.getTransitions().setLatching(true); // should result in dropped message when transitioning
 

@@ -171,7 +171,7 @@ public class ActivationRule extends ProcessingRule {
       // System.err.println("active joiner: " + active + ", registered: " + registered);
 
       EffectiveRegistration effectiveReg =
-          EffectiveRegistration.newBuilder().setClass$(null).setInstance(null).build();
+          EffectiveRegistration.newBuilder().setAction(null).setAlarm(null).build();
 
       EffectiveNotification effectiveNot =
           EffectiveNotification.newBuilder()
@@ -188,8 +188,8 @@ public class ActivationRule extends ProcessingRule {
               .build();
 
       if (registered != null) {
-        result.getRegistration().setInstance(registered.getRegistration().getInstance());
-        result.getRegistration().setClass$(registered.getRegistration().getClass$());
+        result.getRegistration().setAlarm(registered.getRegistration().getAlarm());
+        result.getRegistration().setAction(registered.getRegistration().getAction());
       }
 
       return result;
