@@ -14,14 +14,14 @@ import org.junit.Test;
 
 public class RegistrationRuleTest {
   private TopologyTestDriver testDriver;
-  private TestInputTopic<String, AlarmInstance> inputTopicRegistered;
-  private TestInputTopic<String, AlarmClass> inputTopicClasses;
+  private TestInputTopic<String, Alarm> inputTopicRegistered;
+  private TestInputTopic<String, AlarmAction> inputTopicClasses;
   private TestOutputTopic<String, EffectiveRegistration> outputTopicEffective;
   private TestOutputTopic<String, IntermediateMonolog> outputTopicMonolog;
-  private AlarmInstance instance1;
-  private AlarmInstance instance2;
-  private AlarmClass class1;
-  private AlarmInstance effectiveRegistered1;
+  private Alarm instance1;
+  private Alarm instance2;
+  private AlarmAction class1;
+  private Alarm effectiveRegistered1;
 
   @Before
   public void setup() {
@@ -59,20 +59,20 @@ public class RegistrationRuleTest {
             RegistrationRule.MONOLOG_KEY_SERDE.deserializer(),
             RegistrationRule.MONOLOG_VALUE_SERDE.deserializer());
 
-    instance1 = new AlarmInstance();
-    instance2 = new AlarmInstance();
+    instance1 = new Alarm();
+    instance2 = new Alarm();
 
-    instance1.setAlarmclass("base");
+    instance1.setAction("base");
     instance1.setSource(new Source());
     instance1.setLocation(Arrays.asList("NL"));
 
-    instance2.setAlarmclass("base");
+    instance2.setAction("base");
     instance2.setSource(new Source());
     instance2.setLocation(Arrays.asList("NL"));
 
-    class1 = new AlarmClass();
+    class1 = new AlarmAction();
     class1.setLatchable(true);
-    class1.setCategory("CAMAC");
+    class1.setSystem("CAMAC");
     class1.setFilterable(true);
     class1.setCorrectiveaction("fix it");
     class1.setPriority(AlarmPriority.P3_MINOR);

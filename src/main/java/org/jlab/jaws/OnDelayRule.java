@@ -82,9 +82,9 @@ public class OnDelayRule extends ProcessingRule {
               @Override
               public boolean test(String key, IntermediateMonolog value) {
                 log.debug("Filtering: " + key + ", value: " + value);
-                return value.getRegistration().getClass$() != null
-                    && value.getRegistration().getClass$().getOndelayseconds() != null
-                    && value.getRegistration().getClass$().getOndelayseconds() > 0
+                return value.getRegistration().getAction() != null
+                    && value.getRegistration().getAction().getOndelayseconds() != null
+                    && value.getRegistration().getAction().getOndelayseconds() > 0
                     && value.getTransitions().getTransitionToActive();
               }
             });
@@ -98,7 +98,7 @@ public class OnDelayRule extends ProcessingRule {
                   String key, IntermediateMonolog value) {
                 Long expiration =
                     System.currentTimeMillis()
-                        + (value.getRegistration().getClass$().getOndelayseconds() * 1000);
+                        + (value.getRegistration().getAction().getOndelayseconds() * 1000);
                 return new KeyValue<>(
                     new AlarmOverrideKey(key, OverriddenAlarmType.OnDelayed),
                     new AlarmOverrideUnion(new OnDelayedOverride(expiration)));
@@ -167,10 +167,10 @@ public class OnDelayRule extends ProcessingRule {
         @Override
         public void process(Record<String, IntermediateMonolog> input) {
           log.debug(
-              "Processing key = {}, value = \n\tInstance: {}\n\tClass: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
+              "Processing key = {}, value = \n\tAlarm: {}\n\tAction: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
               input.key(),
-              input.value().getRegistration().getInstance(),
-              input.value().getRegistration().getClass$(),
+              input.value().getRegistration().getAlarm(),
+              input.value().getRegistration().getAction(),
               input.value().getNotification().getActivation(),
               input.value().getNotification().getOverrides(),
               input.value().getTransitions());
@@ -181,9 +181,9 @@ public class OnDelayRule extends ProcessingRule {
               new Record<>(input.key(), input.value(), timestamp);
 
           // Skip the filter unless ondelay is registered
-          if (output.value().getRegistration().getClass$() != null
-              && output.value().getRegistration().getClass$().getOndelayseconds() != null
-              && output.value().getRegistration().getClass$().getOndelayseconds() > 0) {
+          if (output.value().getRegistration().getAction() != null
+              && output.value().getRegistration().getAction().getOndelayseconds() != null
+              && output.value().getRegistration().getAction().getOndelayseconds() > 0) {
 
             // Check if already ondelay in-progress
             boolean ondelaying = store.get(output.key()) != null;

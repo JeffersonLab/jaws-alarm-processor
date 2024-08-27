@@ -140,7 +140,7 @@ public class EffectiveStateRule extends ProcessingRule {
           log.debug(
               "Processing key = {}, value = \n\tInst: {}\n\tAct: {}\n\tOver: {}\n\tTrans: {}",
               input.key(),
-              input.value().getRegistration().getInstance(),
+              input.value().getRegistration().getAlarm(),
               input.value().getNotification(),
               input.value().getNotification().getOverrides(),
               input.value().getTransitions());

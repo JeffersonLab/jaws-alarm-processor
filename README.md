@@ -25,11 +25,11 @@ docker compose up
 ```
 3. Monitor for expiration tombstone message 
 ```
-docker exec -it jaws list_overrides --monitor 
+docker exec -it cli list_overrides --monitor 
 ```
 4. Shelve an alarm for 5 seconds
 ```
-docker exec jaws set_override --override Shelved alarm1 --reason Other --expirationseconds 5
+docker exec cli set_override --override Shelved alarm1 --reason Other --expirationseconds 5
 ```
 
 **See**: More [Usage Examples](https://github.com/JeffersonLab/jaws-effective-processor/wiki/Usage-Examples)
